@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+data/RUN-*.json
+.qa/
+.DS_Store

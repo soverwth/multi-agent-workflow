@@ -1,0 +1,12 @@
+{
+  "name": "b02-workflow-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "B02 WorkflowAgent：discussion_controller 状态机、批判回路、人工确认与事件回放",
+  "scripts": {
+    "dev": "python -m backend.app",
+    "start": "python -m backend.app",
+    "test": "python -m unittest discover -s tests -v",
+    "test:browser": "node tests/browser_smoke.mjs"
+  }
+}

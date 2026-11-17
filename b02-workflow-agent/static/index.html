@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="B02 WorkflowAgent 讨论流程编排原型：状态机、批判回路、人工确认与事件回放。">
+  <title>WorkflowAgent · B02 流程编排</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="项目导航">
+      <div class="brand">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="9" cy="9" r="4"/><circle cx="31" cy="9" r="4"/><circle cx="20" cy="31" r="4"/><path d="M13 10l14 0M11 13l7 14M29 13l-7 14"/></svg>
+        <div><strong>WorkflowAgent</strong><span>B02 · DISCUSSION CONTROLLER</span></div>
+      </div>
+      <button id="new-run" class="new-run-button" type="button">＋ 新建讨论运行</button>
+      <p class="scope-label">WORKFLOW · A—H</p>
+      <ol id="workflow-steps" class="workflow-steps" aria-label="讨论 Workflow 阶段"></ol>
+      <section class="history-section" aria-labelledby="history-title">
+        <div class="sidebar-heading-row"><h2 id="history-title" class="sidebar-heading">历史运行</h2><button id="refresh-runs" class="icon-button" type="button" title="刷新历史运行" aria-label="刷新历史运行">↻</button></div>
+        <div id="run-history" class="run-history"><p class="loading-text">正在读取…</p></div>
+      </section>
+      <div class="sidebar-foot"><span class="status-dot"></span><span>B03 本地快照 · 可恢复回放</span></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><p class="overline">PART 01 / MULTI-AGENT DISCUSSION</p><h1>B02 流程编排 Agent</h1></div>
+        <span class="boundary-badge">只控制流程 · 不代替评价</span>
+      </header>
+
+      <div id="global-error" class="error-panel hidden" role="alert"><span id="global-error-text"></span><button id="dismiss-error" type="button" aria-label="关闭错误提示">关闭</button></div>
+
+      <section id="input-view" class="input-view" aria-labelledby="input-title">
+        <div class="intro-row">
+          <div><h2 id="input-title">把讨论变成可检查的状态机</h2><p>输入一个 Idea，WorkflowAgent 负责组织独立发散、结构化批判、共识评价和人工确认。它不会因为“聊得差不多”就越过门槛。</p></div>
+          <span class="source-label">discussion_controller</span>
+        </div>
+        <form id="run-form" class="input-grid">
+          <section class="panel" aria-labelledby="idea-heading">
+            <div class="panel-heading"><div><h3 id="idea-heading">讨论输入</h3><p>B01 上游提供的想法与约束；此处用测试输入模拟。</p></div><span class="source-label">INPUT</span></div>
+            <label class="field-label" for="idea-input">产品或项目想法</label>
+            <textarea id="idea-input" class="idea-input" required minlength="3" maxlength="500">为课程团队设计一个多智能体需求讨论与确认工具</textarea>
+            <div class="field-help"><span>至少 3 个字符</span><span id="idea-count">0 / 500</span></div>
+            <label class="field-label" for="constraints-input">约束与边界 <span>（可选）</span></label>
+            <textarea id="constraints-input" class="constraints-input" maxlength="1000">首期保留少数意见；未经六人确认不得发布 R1；优先验证流程控制而非真实模型效果。</textarea>
+            <div class="boundary-note"><strong>B02 不负责</strong><span>需求内容质量评价、角色回答生成、界面快照渲染本身，以及后续开发任务 DAG。</span></div>
+          </section>
+          <section class="panel config-panel" aria-labelledby="config-heading">
+            <div class="panel-heading"><div><h3 id="config-heading">运行控制</h3><p>四种场景用于课堂验收。</p></div></div>
+            <label class="field-label" for="scenario-input">演示场景</label>
+            <select id="scenario-input">
+              <option value="normal">正常收敛 → 六人确认</option>
+              <option value="value_conflict">价值分歧 → 人类裁决</option>
+              <option value="budget_exhaustion">预算耗尽 → 诚实停止</option>
+              <option value="agent_failure">Agent 失败 → 阻断</option>
+            </select>
+            <label class="field-label" for="max-rounds">最大批判轮数</label>
+            <input id="max-rounds" type="number" min="1" max="5" value="2" required>
+            <p class="field-note">1—5 轮。达到上限仍有开放异议时 STOPPED，不会伪造共识。</p>
+            <details class="contract-details"><summary>查看接口责任边界</summary><dl class="contract-list"><div><dt>B01</dt><dd>需求草案与六人确认门槛</dd></div><div><dt>B03</dt><dd>黑板、事件和检查点持久化</dd></div><div><dt>B04</dt><dd>角色候选输出，不控制阶段</dd></div><div><dt>B05</dt><dd>消费快照进行可视化</dd></div><div><dt>B06</dt><dd>返回评价，不决定迁移</dd></div></dl></details>
+            <button id="start-button" class="primary-button" type="submit">启动讨论 Workflow</button>
+            <p class="action-note">本地 B01 / B04 / B06 均为可替换测试适配器</p>
+          </section>
+        </form>
+      </section>
+
+      <section id="result-view" class="result-view hidden" aria-labelledby="run-title">
+        <div class="result-heading">
+          <div><p id="run-id" class="plan-meta"></p><h2 id="run-title"></h2><p id="run-subtitle"></p></div>
+          <div class="result-actions">
+            <button id="step-button" class="secondary-button" type="button">推进一阶段</button>
+            <button id="until-button" class="primary-button" type="button">运行至人工介入</button>
+            <button id="pause-button" class="secondary-button" type="button">暂停</button>
+            <button id="export-json" class="secondary-button" type="button">导出 JSON</button>
+            <button id="export-markdown" class="secondary-button" type="button">导出 Markdown</button>
+          </div>
+        </div>
+        <div class="scope-warning"><strong>职责边界</strong><span>B02 只根据 B06 评价执行迁移；暂停、等待、停止都不是共识，只有 B01 六人确认完成后才发布 R1。</span></div>
+        <div class="metrics" aria-label="运行指标">
+          <div class="metric"><strong id="metric-stage">—</strong><span>当前阶段</span></div>
+          <div class="metric"><strong id="metric-status">—</strong><span>控制状态</span></div>
+          <div class="metric"><strong id="metric-round">—</strong><span>批判轮次 / 上限</span></div>
+          <div class="metric"><strong id="metric-objections">—</strong><span>开放异议</span></div>
+          <div class="metric"><strong id="metric-events">—</strong><span>控制事件</span></div>
+        </div>
+        <nav class="result-tabs" aria-label="运行详情视图" role="tablist">
+          <button class="active" type="button" role="tab" aria-selected="true" data-tab="control">运行控制</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="blackboard">黑板与分歧</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="design">迁移与伪代码</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="replay">事件回放</button>
+        </nav>
+        <section id="tab-content" class="result-panel" role="tabpanel" aria-live="polite"></section>
+      </section>
+      <footer class="footer">第 10 组 · 第一部分 B02 · 状态可持久化，事件可回放，人工门槛不可跳过</footer>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
