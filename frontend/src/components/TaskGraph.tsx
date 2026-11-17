@@ -1,24 +1,31 @@
-import { ReactFlow, Background, Controls, useNodesState, useEdgesState } from '@xyflow/react';
+import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useEffect, useMemo } from 'react';
+import { statusColors } from '../constants/status';
 import { layoutTasks } from '../layout/dagreLayout';
-import type { Task } from '../types/task';
+import type { Task, TaskStatus } from '../types/task';
 import { TaskNode } from './TaskNode';
 
 const nodeTypes = { taskNode: TaskNode };
 
-export function TaskGraph({ tasks, onNodeClick }: { tasks: Task[]; onNodeClick?: (task: Task) => void }) {
+interface Props {
+  tasks: Task[];
+  selectedId?: string | null;
+  onNodeClick?: (task: Task) => void;
+}
+
+export function TaskGraph({ tasks, selectedId, onNodeClick }: Props) {
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => layoutTasks(tasks), [tasks]);
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
   useEffect(() => {
-    setNodes(layoutedNodes);
+    setNodes(layoutedNodes.map((n) => ({ ...n, selected: n.id === selectedId })));
     setEdges(layoutedEdges);
-  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
+  }, [layoutedNodes, layoutedEdges, selectedId, setNodes, setEdges]);
 
-   return (
-    <div style={{ width: '100%', height: '100%' }}> {/* 修改高度，适应新布局 */}
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -26,17 +33,24 @@ export function TaskGraph({ tasks, onNodeClick }: { tasks: Task[]; onNodeClick?:
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
-        // 增加点击事件
+        fitViewOptions={{ padding: 0.15 }}
+        proOptions={{ hideAttribution: true }}
         onNodeClick={(_, node) => {
-          // 从 tasks 里找出被点击的节点数据，传给 App.tsx
-          const clickedTask = tasks.find(t => t.task_id === node.id);
-          if (clickedTask && onNodeClick) {
-            onNodeClick(clickedTask);
-          }
+          const clicked = tasks.find((t) => t.task_id === node.id);
+          if (clicked && onNodeClick) onNodeClick(clicked);
         }}
       >
-        <Background />
-        <Controls />
+        <Background gap={18} size={1} color="#e2e8f0" />
+        <Controls showInteractive={false} />
+        <MiniMap
+          pannable
+          zoomable
+          nodeColor={(n) => {
+            const status = (n.data as { task?: { status?: TaskStatus } })?.task?.status;
+            return status ? statusColors[status] : '#cbd5e1';
+          }}
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+        />
       </ReactFlow>
     </div>
   );
