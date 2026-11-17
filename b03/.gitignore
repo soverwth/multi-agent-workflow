@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# B03 运行时生成的数据，不提交
+*.db
+*.db-journal
+checkpoint.json
+
+# 虚拟环境
+.venv/
+venv/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
