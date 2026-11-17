@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "se-workflow-b04"
+version = "0.3.0"
+description = "B04 generic agent runtime: model adapter, agent runner and controlled tool executor"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.26,<5"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
