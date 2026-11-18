@@ -1,0 +1,133 @@
+{
+  "project_id": "campus-lost-found",
+  "requirements_version": "R1-REFERENCE-v1.0",
+  "status": "REFERENCE_BASELINE_NOT_HUMAN_CONFIRMED",
+  "source": {
+    "document": "第10组_第一部分_多智能体讨论与需求确认(1).docx",
+    "sha256": "8F4A7F20B6F902EEAA99E15B42E58D32ED7C366955D407B9612DBBEF77CB4E34",
+    "sections": [
+      "9.1",
+      "9.1.1",
+      "9.2",
+      "9.3",
+      "10",
+      "11",
+      "14.1"
+    ]
+  },
+  "human_confirmation": {
+    "required": true,
+    "status": "PENDING",
+    "reviewers": {
+      "B01": "PENDING",
+      "B02": "PENDING",
+      "B03": "PENDING",
+      "B04": "PENDING",
+      "B05": "PENDING",
+      "B06": "PENDING"
+    },
+    "note": "团队文档明确说明示例不构成真实六人确认记录；参考实现不得声称已完成人类确认。"
+  },
+  "scope": [
+    "LR-01 注册登录",
+    "LR-02 发布失物",
+    "LR-03 关键词及地点搜索",
+    "LR-04 认领申请",
+    "LR-05 本人资料及本人记录"
+  ],
+  "out_of_scope": [
+    "举报",
+    "过期清理",
+    "校园统一身份认证",
+    "实时聊天",
+    "公开私人联系方式",
+    "认领确认、驳回与完成状态"
+  ],
+  "requirements": [
+    {
+      "req_id": "LR-01",
+      "description": "普通校内用户注册、登录和退出；受保护操作要求已登录；凭据不得明文保存或返回。",
+      "priority": "必须",
+      "source_decision": "DOC-EXAMPLE-9.3",
+      "acceptance": [
+        "重复账号拒绝",
+        "错误凭据拒绝",
+        "未登录不能发布或申请认领"
+      ],
+      "constraints": [
+        "password_hash 不得出现在任何公开响应"
+      ],
+      "status": "REFERENCE_DRAFT"
+    },
+    {
+      "req_id": "LR-02",
+      "description": "用户填写名称、描述、丢失地点、丢失时间 lost_at；发布者取当前身份；初始状态为待认领。",
+      "priority": "必须",
+      "source_decision": "DOC-EXAMPLE-9.3",
+      "acceptance": [
+        "合法输入生成记录",
+        "lost_at 缺失、空值或格式错误时拒绝且不写入"
+      ],
+      "constraints": [
+        "publisher_id 由会话取得，不接受客户端指定",
+        "status 本轮仅取 waiting"
+      ],
+      "status": "REFERENCE_DRAFT"
+    },
+    {
+      "req_id": "LR-03",
+      "description": "按关键词及丢失地点检索，支持分页；列表和详情不暴露登录凭据与私人联系方式。",
+      "priority": "必须",
+      "source_decision": "DOC-EXAMPLE-9.3",
+      "acceptance": [
+        "匹配项可检索",
+        "无匹配返回空列表",
+        "详情字段与发布结果一致"
+      ],
+      "constraints": [
+        "公开视图使用 LostView",
+        "page_size 范围 1—100"
+      ],
+      "status": "REFERENCE_DRAFT"
+    },
+    {
+      "req_id": "LR-04",
+      "description": "登录用户对待认领信息提交说明；禁止认领自己的信息及重复提交；本人可查看申请。",
+      "priority": "必须",
+      "source_decision": "DOC-EXAMPLE-9.3",
+      "acceptance": [
+        "有效申请生成 pending 记录",
+        "本人信息、重复申请及无效对象均拒绝"
+      ],
+      "constraints": [
+        "(lost_item_id, applicant_id) 唯一",
+        "状态检查、权限检查与插入同事务"
+      ],
+      "status": "REFERENCE_DRAFT"
+    },
+    {
+      "req_id": "LR-05",
+      "description": "查看与修改本人昵称等允许字段；查看本人发布与认领记录；账号标识不由客户端任意改写。",
+      "priority": "必须",
+      "source_decision": "DOC-EXAMPLE-9.3",
+      "acceptance": [
+        "修改只影响本人",
+        "不能越权查看或修改他人个人资料"
+      ],
+      "constraints": [
+        "update_me 仅接受 nickname",
+        "本人列表使用统一分页规则"
+      ],
+      "status": "REFERENCE_DRAFT"
+    }
+  ],
+  "non_blocking_open_questions": [
+    {
+      "id": "OQ-UAA",
+      "description": "是否接入校园统一身份认证",
+      "owner": "六人共同确认",
+      "impact": "不影响本轮基础注册登录"
+    }
+  ],
+  "blocking_open_questions": []
+}
