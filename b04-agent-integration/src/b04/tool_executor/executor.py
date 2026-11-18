@@ -246,7 +246,7 @@ class ToolExecutor:
         if active and (active.unit or active.start_task):
             cleanup_started=time.monotonic()
             receipt=await self._stop_active(ref,control)
-            session.cleanup_ms+=(time.monotonic()-cleanup_started)*1000
+            session.cleanup_ms=max(0.001,session.cleanup_ms+(time.monotonic()-cleanup_started)*1000)
             fault.stop_status=receipt['stop_status']
             if fault.stop_status!='confirmed':fault.effects='unknown'
         status='unknown' if fault.stop_status!='confirmed' or fault.effects=='unknown' else 'timed_out' if fault.code=='TOOL_TIMEOUT' else 'stopped' if fault.code=='TOOL_STOPPED' else 'failed' if session and session.executed else 'rejected'
@@ -276,7 +276,19 @@ class ToolExecutor:
         async with active.stop_lock:
             try:
                 self._aux(control,'cleanup',ref)
-                if active.start_task and not active.start_task.done():return dict(stop_status='unknown',evidence_refs=[])
+                if active.start_task and not active.start_task.done():
+                    # The backend may publish a unit before its start call
+                    # returns.  Stop that unit through the durable backend
+                    # reference instead of reporting uncertainty prematurely.
+                    unit_info=self._units.get(op_key(ref))
+                    if unit_info:
+                        backend_ref,unit_ref=unit_info
+                        backend=self.sandboxes.get(backend_ref)
+                        if backend is not None:
+                            receipt=await self._bounded_stop(ref,backend.stop_existing,unit_ref,self.cleanup_timeout)
+                            self.store.append(ref,'stop_observation',receipt)
+                            return receipt
+                    return dict(stop_status='unknown',evidence_refs=[])
                 if active.unit is None and active.start_task:active.unit=active.start_task.result()
                 if active.unit:
                     receipt=await self._bounded_stop(ref,active.unit.stop,self.cleanup_timeout)
