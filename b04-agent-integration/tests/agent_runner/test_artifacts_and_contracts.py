@@ -118,7 +118,8 @@ def test_tool_execution_can_supply_actual_test_report_artifact(runtime_factory):
 def test_manifest_matches_protocol_example_mandatory_field_set(runtime):
     _,snapshot=run(execute(runtime));saved=manifest(runtime,snapshot)
     root=Path(__file__).resolve().parents[2]
-    samples=[json.loads(t) for t in re.findall(r'```json\s*\n(.*?)\n```',(root/"B04_任务执行协议设计.md").read_text(encoding="utf-8"),re.S)]
+    protocol_doc=next(p for p in root.glob("B04_*.md") if "protocol_version" in p.read_text(encoding="utf-8"))
+    samples=[json.loads(t) for t in re.findall(r'```json\s*\n(.*?)\n```',protocol_doc.read_text(encoding="utf-8"),re.S)]
     template=next(s for s in samples if "manifest_contract_version" in s)
     assert set(saved)==set(template)
 
