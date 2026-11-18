@@ -1,0 +1,296 @@
+{
+  "contract_version": "C1-v1.0",
+  "base_contract": "C1",
+  "prefix": "/api/v1",
+  "source": {
+    "document": "第10组_第二部分_设计规格与开发任务编排(1).docx",
+    "sha256": "E1567A68D6E5AB8111E4576E4296E4E001DBB62BF01A2F3534E92CFF2DC19974",
+    "sections": [
+      "2.1",
+      "2.2.2",
+      "2.2.3",
+      "2.2.4",
+      "4.2",
+      "4.3",
+      "4.3.1",
+      "5.2",
+      "9.1",
+      "10.1"
+    ]
+  },
+  "owner": "B01 SpecPlannerAgent",
+  "operations": [
+    {
+      "name": "register",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "authenticated": false,
+      "required": [
+        "account",
+        "password",
+        "nickname"
+      ],
+      "status": 201,
+      "data": "UserView"
+    },
+    {
+      "name": "login",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "authenticated": false,
+      "required": [
+        "account",
+        "password"
+      ],
+      "status": 200,
+      "data": "LoginView"
+    },
+    {
+      "name": "logout",
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "authenticated": true,
+      "required": [],
+      "status": 200,
+      "data": "Null"
+    },
+    {
+      "name": "get_me",
+      "method": "GET",
+      "path": "/api/v1/me",
+      "authenticated": true,
+      "required": [],
+      "status": 200,
+      "data": "UserView"
+    },
+    {
+      "name": "update_me",
+      "method": "PATCH",
+      "path": "/api/v1/me",
+      "authenticated": true,
+      "required": [
+        "nickname"
+      ],
+      "status": 200,
+      "data": "UserView"
+    },
+    {
+      "name": "list_my_posts",
+      "method": "GET",
+      "path": "/api/v1/me/lost-items",
+      "authenticated": true,
+      "query": [
+        "page",
+        "page_size"
+      ],
+      "status": 200,
+      "data": "LostPage"
+    },
+    {
+      "name": "list_my_claims",
+      "method": "GET",
+      "path": "/api/v1/me/claims",
+      "authenticated": true,
+      "query": [
+        "page",
+        "page_size"
+      ],
+      "status": 200,
+      "data": "ClaimPage"
+    },
+    {
+      "name": "publish_lost",
+      "method": "POST",
+      "path": "/api/v1/lost-items",
+      "authenticated": true,
+      "required": [
+        "name",
+        "description",
+        "location",
+        "lost_at"
+      ],
+      "status": 201,
+      "data": "LostView"
+    },
+    {
+      "name": "search_lost",
+      "method": "GET",
+      "path": "/api/v1/lost-items",
+      "authenticated": false,
+      "query": [
+        "keyword",
+        "location",
+        "page",
+        "page_size"
+      ],
+      "status": 200,
+      "data": "LostPage"
+    },
+    {
+      "name": "get_lost",
+      "method": "GET",
+      "path": "/api/v1/lost-items/{id}",
+      "authenticated": false,
+      "required": [],
+      "status": 200,
+      "data": "LostView"
+    },
+    {
+      "name": "create_claim",
+      "method": "POST",
+      "path": "/api/v1/lost-items/{id}/claims",
+      "authenticated": true,
+      "required": [
+        "statement"
+      ],
+      "status": 201,
+      "data": "ClaimView"
+    }
+  ],
+  "errors": {
+    "REQUIRED_FIELD": 400,
+    "INVALID_FIELD": 400,
+    "UNAUTHENTICATED": 401,
+    "FORBIDDEN": 403,
+    "NOT_FOUND": 404,
+    "DUPLICATE_ACCOUNT": 409,
+    "DUPLICATE_CLAIM": 409,
+    "INVALID_STATE": 409,
+    "INTERNAL_ERROR": 500
+  },
+  "response_envelope": {
+    "success": {
+      "ok": true,
+      "data": "值"
+    },
+    "failure": {
+      "ok": false,
+      "error": {
+        "code": "字符串",
+        "field": "字符串或 null",
+        "message": "字符串"
+      }
+    },
+    "rule": "失败响应不含 data；field 在权限、凭据、对象不存在及内部错误时为 null。"
+  },
+  "field_bounds": {
+    "account": {
+      "min": 3,
+      "max": 64,
+      "pattern": "^[a-z0-9_]+$",
+      "storage": "小写存储与查重"
+    },
+    "password": {
+      "min": 8,
+      "max": 128,
+      "trim": false,
+      "hash": "Argon2id(m=19456KiB,t=2,p=1,salt>=16B)"
+    },
+    "nickname": {
+      "min": 1,
+      "max": 30
+    },
+    "name": {
+      "min": 1,
+      "max": 80
+    },
+    "description": {
+      "min": 1,
+      "max": 1000
+    },
+    "location": {
+      "min": 1,
+      "max": 120
+    },
+    "statement": {
+      "min": 1,
+      "max": 500
+    },
+    "id": "服务端生成的 UUID 字符串",
+    "lost_at": "ISO 8601 带时区；输出 UTC 三位毫秒",
+    "pagination": {
+      "page_default": 1,
+      "page_size_default": 20,
+      "page_size_range": [
+        1,
+        100
+      ]
+    }
+  },
+  "$defs": {
+    "Uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "Time": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "UserView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "account",
+        "nickname",
+        "created_at"
+      ]
+    },
+    "LostView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "location",
+        "lost_at",
+        "status",
+        "created_at"
+      ]
+    },
+    "ClaimView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "lost_item_id",
+        "statement",
+        "status",
+        "created_at"
+      ]
+    },
+    "LoginView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token",
+        "expires_at",
+        "user"
+      ]
+    },
+    "Null": {
+      "type": "null"
+    },
+    "LostPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "page",
+        "page_size",
+        "total"
+      ]
+    },
+    "ClaimPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "page",
+        "page_size",
+        "total"
+      ]
+    }
+  }
+}

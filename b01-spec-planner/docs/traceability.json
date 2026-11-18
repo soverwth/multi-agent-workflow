@@ -1,0 +1,338 @@
+{
+  "plan_version": "PLAN-v1.0",
+  "spec_version": "S1-v1.0",
+  "contract_version": "C1-v1.0",
+  "format": "design_id -> req_refs -> contract_refs -> test_refs -> task_refs",
+  "items": [
+    {
+      "design_id": "DS-AUTH-01",
+      "module": "用户与身份",
+      "req_refs": [
+        "LR-01"
+      ],
+      "contract_refs": [
+        "register",
+        "login",
+        "logout"
+      ],
+      "test_refs": [
+        "TC-AUTH-01",
+        "TC-AUTH-02"
+      ],
+      "task_refs": [
+        "T01",
+        "T03",
+        "T06",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "rule": "注册不自动登录；口令使用 Argon2id(19MiB,2,1)；会话 24 小时失效，logout 撤销当前令牌。"
+    },
+    {
+      "design_id": "DS-USER-01",
+      "module": "用户与身份",
+      "req_refs": [
+        "LR-05"
+      ],
+      "contract_refs": [
+        "get_me",
+        "update_me",
+        "list_my_posts",
+        "list_my_claims"
+      ],
+      "test_refs": [
+        "TC-USER-01"
+      ],
+      "task_refs": [
+        "T01",
+        "T03",
+        "T06",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "rule": "身份从会话取得；update_me 仅接受 nickname；本人列表按 created_at/id 降序稳定分页。"
+    },
+    {
+      "design_id": "DS-LOST-01",
+      "module": "失物发布与搜索",
+      "req_refs": [
+        "LR-02"
+      ],
+      "contract_refs": [
+        "publish_lost"
+      ],
+      "test_refs": [
+        "TC-P01",
+        "TC-P02",
+        "TC-P03"
+      ],
+      "task_refs": [
+        "T01",
+        "T04",
+        "T07",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "rule": "lost_at 必填且带时区；缺失/空/非法值拒绝且不写入；发布者取自当前身份，status=waiting。"
+    },
+    {
+      "design_id": "DS-LOST-02",
+      "module": "失物发布与搜索",
+      "req_refs": [
+        "LR-03"
+      ],
+      "contract_refs": [
+        "search_lost",
+        "get_lost"
+      ],
+      "test_refs": [
+        "TC-SEARCH-01",
+        "TC-SEARCH-02"
+      ],
+      "task_refs": [
+        "T01",
+        "T04",
+        "T07",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "rule": "keyword 普通包含匹配，location 去空白后精确匹配；公开视图统一为 LostView。"
+    },
+    {
+      "design_id": "DS-CLAIM-01",
+      "module": "认领申请",
+      "req_refs": [
+        "LR-04"
+      ],
+      "contract_refs": [
+        "create_claim"
+      ],
+      "test_refs": [
+        "TC-CLAIM-01",
+        "TC-CLAIM-02"
+      ],
+      "task_refs": [
+        "T01",
+        "T05",
+        "T08",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "rule": "禁止认领本人信息；对象状态、权限、重复性与插入在同一事务；重复申请转 DUPLICATE_CLAIM。"
+    },
+    {
+      "design_id": "DS-COMMON-01",
+      "module": "公共契约",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "response_envelope",
+        "error_mapping"
+      ],
+      "test_refs": [
+        "TC-ERR-01"
+      ],
+      "task_refs": [
+        "T01",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "rule": "成功固定 {ok:true,data:值}；失败固定 {ok:false,error:{code,field,message}} 且不含 data。"
+    },
+    {
+      "design_id": "DS-B03-01",
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "task_store",
+        "artifact_store"
+      ],
+      "test_refs": [
+        "TC-B03-01"
+      ],
+      "task_refs": [
+        "T01",
+        "T02",
+        "T10",
+        "T11"
+      ],
+      "rule": "黑板过程数据与校园业务数据分开管理，不为 Orchestrator 另建业务库。"
+    },
+    {
+      "design_id": "DS-B03-02",
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "task_store"
+      ],
+      "test_refs": [
+        "TC-B03-02"
+      ],
+      "task_refs": [
+        "T01",
+        "T02",
+        "T10",
+        "T11"
+      ],
+      "rule": "黑板公共约定采用 UUID、只追加和版本标记。"
+    },
+    {
+      "design_id": "DS-B03-03",
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "event_store"
+      ],
+      "test_refs": [
+        "TC-B03-03"
+      ],
+      "task_refs": [
+        "T01",
+        "T10",
+        "T11"
+      ],
+      "rule": "事件去重与幂等：重复事件只记一次，过期回调不推进状态。"
+    },
+    {
+      "design_id": "DS-B03-04",
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "input_snapshot"
+      ],
+      "test_refs": [
+        "TC-B03-04"
+      ],
+      "task_refs": [
+        "T01",
+        "T10",
+        "T11"
+      ],
+      "rule": "派发前冻结输入快照，验收前核对快照仍有效。"
+    },
+    {
+      "design_id": "DS-B03-05",
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "checkpoint"
+      ],
+      "test_refs": [
+        "TC-B03-05"
+      ],
+      "task_refs": [
+        "T01",
+        "T10",
+        "T11"
+      ],
+      "rule": "检查点保存计划版本、任务状态、事件编号、产物清单和租约，中断后可恢复且不重复执行。"
+    },
+    {
+      "design_id": "DS-B03-06",
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "lease"
+      ],
+      "test_refs": [
+        "TC-B03-06"
+      ],
+      "task_refs": [
+        "T01",
+        "T10",
+        "T11"
+      ],
+      "rule": "租约与原子操作保证并发写入不覆盖，写入范围冲突时拒绝派发。"
+    },
+    {
+      "design_id": "DS-B03-07",
+      "module": "数据约束",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-05"
+      ],
+      "contract_refs": [
+        "field_bounds"
+      ],
+      "test_refs": [
+        "TC-B03-07"
+      ],
+      "task_refs": [
+        "T01",
+        "T02",
+        "T10",
+        "T11"
+      ],
+      "rule": "C1 字段边界落地为数据层约束，非法值拒绝且不写入。"
+    },
+    {
+      "design_id": "DS-B03-08",
+      "module": "数据约束",
+      "req_refs": [
+        "LR-04"
+      ],
+      "contract_refs": [
+        "create_claim"
+      ],
+      "test_refs": [
+        "TC-B03-08"
+      ],
+      "task_refs": [
+        "T01",
+        "T02",
+        "T10",
+        "T11"
+      ],
+      "rule": "事务与唯一约束防止部分写入和重复申请。"
+    }
+  ]
+}

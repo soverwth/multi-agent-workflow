@@ -1,0 +1,148 @@
+{
+  "spec_version": "S1-v1.0",
+  "project_id": "campus-lost-found",
+  "source": {
+    "document": "第10组_第二部分_设计规格与开发任务编排(1).docx",
+    "sha256": "E1567A68D6E5AB8111E4576E4296E4E001DBB62BF01A2F3534E92CFF2DC19974",
+    "sections": [
+      "2.1",
+      "2.2.2",
+      "2.2.3",
+      "2.2.4",
+      "4.2",
+      "4.3",
+      "4.3.1",
+      "5.2",
+      "9.1",
+      "10.1"
+    ]
+  },
+  "status": "REFERENCE_APPROVED_ASSUMED",
+  "approval_note": "文档以“已取得 R1”为推演前提；本参考包不声称已完成真实六人批准。",
+  "modules": [
+    {
+      "module": "用户与身份",
+      "req_refs": [
+        "LR-01",
+        "LR-05"
+      ],
+      "design_refs": [
+        "DS-AUTH-01",
+        "DS-USER-01"
+      ],
+      "entities": [
+        "User",
+        "Session"
+      ]
+    },
+    {
+      "module": "失物发布与搜索",
+      "req_refs": [
+        "LR-02",
+        "LR-03"
+      ],
+      "design_refs": [
+        "DS-LOST-01",
+        "DS-LOST-02"
+      ],
+      "entities": [
+        "LostItem"
+      ]
+    },
+    {
+      "module": "认领申请",
+      "req_refs": [
+        "LR-04"
+      ],
+      "design_refs": [
+        "DS-CLAIM-01"
+      ],
+      "entities": [
+        "ClaimApplication"
+      ]
+    },
+    {
+      "module": "黑板状态",
+      "req_refs": [
+        "LR-01",
+        "LR-02",
+        "LR-03",
+        "LR-04",
+        "LR-05"
+      ],
+      "design_refs": [
+        "DS-B03-01",
+        "DS-B03-02",
+        "DS-B03-03",
+        "DS-B03-04",
+        "DS-B03-05",
+        "DS-B03-06",
+        "DS-B03-07",
+        "DS-B03-08"
+      ],
+      "entities": [
+        "Task",
+        "Event",
+        "Artifact",
+        "Checkpoint",
+        "Lease"
+      ]
+    }
+  ],
+  "data_model": {
+    "User": {
+      "fields": [
+        "id",
+        "account",
+        "password_hash",
+        "nickname",
+        "created_at"
+      ],
+      "constraints": [
+        "account 唯一且按小写存储",
+        "password_hash 不得出现在公开响应"
+      ]
+    },
+    "LostItem": {
+      "fields": [
+        "id",
+        "publisher_id",
+        "name",
+        "description",
+        "location",
+        "lost_at",
+        "status",
+        "created_at"
+      ],
+      "constraints": [
+        "publisher_id 关联 User",
+        "lost_at 带时区且必填",
+        "status 仅 waiting"
+      ]
+    },
+    "ClaimApplication": {
+      "fields": [
+        "id",
+        "lost_item_id",
+        "applicant_id",
+        "statement",
+        "status",
+        "created_at"
+      ],
+      "constraints": [
+        "对象与申请人必须存在",
+        "(lost_item_id, applicant_id) 唯一",
+        "status 仅 pending"
+      ]
+    }
+  },
+  "environment_constraints": [
+    "HTTP JSON，统一前缀 /api/v1",
+    "所有 id 为服务端生成的 UUID 字符串",
+    "时间统一输出 UTC ISO 8601 三位毫秒",
+    "演示使用虚构或脱敏数据"
+  ],
+  "open_questions": [
+    "OQ-UAA"
+  ]
+}
