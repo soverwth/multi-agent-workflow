@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from .adapters import MEMBERS
+from .adapters import MEMBERS, RequirementGateway
 from .controller import DiscussionController
 from .errors import WorkflowError
 from .exporter import export_run
 from .phase_bridge import r1_to_design_spec
+from .llm import OpenAICompatibleClient
 from .store import BlackboardStore
 from .task_api import TaskApi
 from .websocket import WorkflowEventHub, WebSocketClient, serve_websocket, websocket_accept
@@ -24,7 +25,12 @@ class ApplicationService:
     def __init__(self, root: Path, task_root: Path | None = None):
         self.root = root
         self.events = WorkflowEventHub()
-        self.controller = DiscussionController(BlackboardStore(root / "data"), on_event=self.events.publish)
+        self.llm_client = OpenAICompatibleClient()
+        self.controller = DiscussionController(
+            BlackboardStore(root / "data"),
+            requirements=RequirementGateway(self.llm_client),
+            on_event=self.events.publish,
+        )
         # 任务编排与讨论流程共用同一 HTTP 服务，但状态存于独立的任务库里。
         self.task_api = TaskApi(task_root or (root / "data" / "task-state.db"))
 
@@ -98,10 +104,13 @@ class RequestHandler(BaseHTTPRequestHandler):
             query = self._query()
             service = self.service
             if path == "/api/health":
-                self._json({"status": "ok", "block": "B02", "role": "WorkflowAgent", "controllers": ["discussion_controller", "task_orchestrator"], "websocket": "/ws/runs/{run_id}", "task_api": service.task_api.describe()})
+                self._json({"status": "ok", "block": "B02", "role": "WorkflowAgent", "controllers": ["discussion_controller", "task_orchestrator"], "websocket": "/ws/runs/{run_id}", "task_api": service.task_api.describe(), "llm": service.llm_client.config.public()})
                 return
             if path == "/api/workflow":
                 self._json({"stages": STAGES, "transitions": TRANSITIONS, "pseudocode": PSEUDOCODE, "members": MEMBERS})
+                return
+            if path == "/api/llm/config":
+                self._json({"llm": service.llm_client.config.public()})
                 return
             if path == "/api/runs":
                 self._json({"runs": service.controller.store.list()})
@@ -220,6 +229,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         """任务编排写接口；返回 True 表示已处理。"""
         api = self.service.task_api
         parts = path.strip("/").split("/")
+        if path == "/api/llm/config":
+            changes = {key: payload[key] for key in ("base_url", "model", "api_key", "timeout_seconds", "enabled") if key in payload}
+            if "enabled" in changes:
+                changes["enabled"] = bool(changes["enabled"])
+            self.service.llm_client.configure(**changes)
+            self._json({"llm": self.service.llm_client.config.public()})
+            return True
         if path == "/api/task-plans/load":
             self._json(api.load_plan(payload), 201)
             return True

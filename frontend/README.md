@@ -29,6 +29,11 @@ python -m backend.app --host 127.0.0.1 --port 7100
 点击“从设计规格启动”。页面会调用 B02 的 `/api/task-runs/from-spec`，由 B01 动态生成
 计划并创建真实运行；“推进一步”和“运行至完成”分别对应 B02 的调度控制接口。
 
+页面顶部的“统一 SE Workflow 工作台”还支持完整演示路径。输入用户想法后创建第一阶段运行，
+推进到需求确认并完成六人确认，随后查看桥接后的 design spec，直接创建第二阶段任务运行。
+工作台的模型 API 配置可以启用 DeepSeek 或其他 OpenAI-compatible 服务。没有密钥时使用本地
+领域规则，仍会根据不同想法生成不同需求集合。接口和环境变量见 [`docs/LLM_INTEGRATION.md`](../docs/LLM_INTEGRATION.md)。
+
 ## 数据源
 
 | 模式 | 数据来源 | 说明 |
@@ -47,6 +52,7 @@ python -m backend.app --host 127.0.0.1 --port 7100
 | 点击任务展示输入、输出、依赖、验收、测试、日志、提交、缺陷 | `src/components/TaskDetailPanel.tsx` |
 | 真实接口接入与来源区分 | `src/api/taskRunApi.ts`、`src/hooks/useTaskRun.ts` |
 | 模拟/真实数据源切换 | `src/App.tsx` |
+| 统一工作台、design spec 查看、模型配置 | `src/App.tsx`、`src/api/taskRunApi.ts` |
 
 任务类型定义（含 `block_id`、`acceptance`、`required_test_ids`、`candidate_commit`、
 `logs`、`duration_seconds`、`review` 等字段）见 `src/types/task.ts`，

@@ -1,9 +1,21 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { loadSimulationRun, listSimulationRuns, type SimulationRun } from './data/simulationRuns';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { TaskGraph } from './components/TaskGraph';
 import { ALL_STATUSES, statusColors, statusLabels } from './constants/status';
-import { createTaskRunFromSpec, type RunEvent } from './api/taskRunApi';
+import {
+  advanceDiscussion,
+  confirmDiscussion,
+  createDiscussionRun,
+  createTaskRunFromDiscussion,
+  createTaskRunFromSpec,
+  fetchDesignSpec,
+  fetchLlmConfig,
+  type DiscussionRun,
+  type LlmConfigStatus,
+  type RunEvent,
+  updateLlmConfig,
+} from './api/taskRunApi';
 import { useTaskRun } from './hooks/useTaskRun';
 import type { DataSource, Task } from './types/task';
 import {
@@ -18,6 +30,7 @@ import type { AckEntry, LogEntry } from './hooks/useTaskWebSocket';
 
 /** 真实接口默认地址：B02 任务编排服务。 */
 const DEFAULT_API_BASE = 'http://127.0.0.1:7100';
+const CONFIRMATION_MEMBERS = ['成员 A', '成员 B', '成员 C', '成员 D', '成员 E', '成员 F'];
 
 type ReportEvent = Pick<RunEvent, 'sequence' | 'type' | 'task_id' | 'occurred_at'> & { event_id?: string };
 
@@ -60,6 +73,19 @@ function App() {
   const [submittedRunId, setSubmittedRunId] = useState('');
   const [specPath, setSpecPath] = useState('b01-spec-planner/docs/fixtures/campus-lost-found.spec.json');
   const [launching, setLaunching] = useState(false);
+  const [discussionIdea, setDiscussionIdea] = useState('');
+  const [discussionConstraints, setDiscussionConstraints] = useState('');
+  const [discussion, setDiscussion] = useState<DiscussionRun | null>(null);
+  const [discussionBusy, setDiscussionBusy] = useState(false);
+  const [discussionError, setDiscussionError] = useState<string | null>(null);
+  const [sourceRunId, setSourceRunId] = useState('');
+  const [designSpec, setDesignSpec] = useState<Record<string, unknown> | null>(null);
+  const [specLoading, setSpecLoading] = useState(false);
+  const [llmConfig, setLlmConfig] = useState<LlmConfigStatus | null>(null);
+  const [llmApiKey, setLlmApiKey] = useState('');
+  const [llmBaseUrl, setLlmBaseUrl] = useState('https://api.deepseek.com');
+  const [llmModel, setLlmModel] = useState('deepseek-chat');
+  const [llmSaving, setLlmSaving] = useState(false);
   const isReal = source === 'real';
   const real = useTaskRun({
     baseUrl: apiBase,
@@ -79,6 +105,16 @@ function App() {
   const selectedTask = tasks.find((task) => task.task_id === selectedId) ?? null;
   const reportLogs = eventLogs(isReal ? real.events : simulation?.events ?? []);
   const reportAcks: AckEntry[] = [];
+
+  useEffect(() => {
+    void fetchLlmConfig(apiBase)
+      .then((config) => {
+        setLlmConfig(config);
+        setLlmBaseUrl(config.base_url);
+        setLlmModel(config.model);
+      })
+      .catch(() => setLlmConfig(null));
+  }, [apiBase]);
 
   const stats = useMemo(() => {
     const done = tasks.filter((task) => task.status === 'SUCCEEDED').length;
@@ -121,6 +157,97 @@ function App() {
       setLaunching(false);
     }
   }, [apiBase, specPath]);
+
+  const handleCreateDiscussion = useCallback(async () => {
+    if (!discussionIdea.trim()) return;
+    setDiscussionBusy(true);
+    setDiscussionError(null);
+    try {
+      const created = await createDiscussionRun(apiBase, discussionIdea, discussionConstraints);
+      setDiscussion(created);
+      setSourceRunId(created.run_id);
+      setDesignSpec(null);
+    } catch (caught) {
+      setDiscussionError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDiscussionBusy(false);
+    }
+  }, [apiBase, discussionConstraints, discussionIdea]);
+
+  const handleAdvanceDiscussion = useCallback(async () => {
+    if (!discussion) return;
+    setDiscussionBusy(true);
+    setDiscussionError(null);
+    try {
+      setDiscussion(await advanceDiscussion(apiBase, discussion.run_id));
+    } catch (caught) {
+      setDiscussionError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDiscussionBusy(false);
+    }
+  }, [apiBase, discussion]);
+
+  const handleConfirmDiscussion = useCallback(async () => {
+    if (!discussion) return;
+    setDiscussionBusy(true);
+    setDiscussionError(null);
+    try {
+      setDiscussion(await confirmDiscussion(apiBase, discussion.run_id, CONFIRMATION_MEMBERS));
+    } catch (caught) {
+      setDiscussionError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDiscussionBusy(false);
+    }
+  }, [apiBase, discussion]);
+
+  const handleBridgeDiscussion = useCallback(async () => {
+    if (!discussion || discussion.status !== 'COMPLETED') return;
+    setDiscussionBusy(true);
+    setDiscussionError(null);
+    try {
+      const created = await createTaskRunFromDiscussion(apiBase, discussion.run_id);
+      setDesignSpec(created.source);
+      setRunIdInput(created.run.run_id);
+      setSubmittedRunId(created.run.run_id);
+      setSource('real');
+      setSelectedId(null);
+    } catch (caught) {
+      setDiscussionError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDiscussionBusy(false);
+    }
+  }, [apiBase, discussion]);
+
+  const handleLoadDesignSpec = useCallback(async () => {
+    if (!sourceRunId.trim()) return;
+    setSpecLoading(true);
+    setDiscussionError(null);
+    try {
+      setDesignSpec(await fetchDesignSpec(apiBase, sourceRunId.trim()));
+    } catch (caught) {
+      setDiscussionError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSpecLoading(false);
+    }
+  }, [apiBase, sourceRunId]);
+
+  const handleSaveLlmConfig = useCallback(async () => {
+    setLlmSaving(true);
+    try {
+      const updated = await updateLlmConfig(apiBase, {
+        base_url: llmBaseUrl,
+        model: llmModel,
+        api_key: llmApiKey,
+        enabled: true,
+      });
+      setLlmConfig(updated);
+      setLlmApiKey('');
+    } catch (caught) {
+      setDiscussionError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setLlmSaving(false);
+    }
+  }, [apiBase, llmApiKey, llmBaseUrl, llmModel]);
 
   // 导出上下文在“点击导出时”构造：时间戳必须反映真实导出时刻，
   // 不能在渲染期求值（否则每次重渲染都会变，且违反 React 纯函数约束）。
@@ -204,6 +331,88 @@ function App() {
 
       <div className="app-main">
         <div className="app-content">
+          <section className="workbench-panel">
+            <div className="workbench-heading">
+              <div>
+                <strong>统一 SE Workflow 工作台</strong>
+                <span>用户想法 → 多体讨论 → R1 → design spec → PM Agent → 编排器 → 执行验收</span>
+              </div>
+              <span className={`llm-status ${llmConfig?.enabled ? 'ready' : 'local'}`}>
+                {llmConfig?.enabled ? `模型已连接 · ${llmConfig.model}` : '本地规则兜底'}
+              </span>
+            </div>
+            <div className="workflow-rail" aria-label="通用软件工程流程">
+              {['用户想法', '多体讨论', 'R1 确认', '设计规格', '任务分解', '任务编排', '执行验收', '可视化'].map((stage, index) => (
+                <span key={stage} className={index < 4 && discussion?.status === 'COMPLETED' ? 'done' : ''}>
+                  <b>{index + 1}</b>{stage}
+                </span>
+              ))}
+            </div>
+            <div className="workbench-grid">
+              <div className="workbench-card">
+                <h3>第一阶段：用户想法与 R1</h3>
+                <textarea
+                  aria-label="用户想法"
+                  value={discussionIdea}
+                  onChange={(event) => setDiscussionIdea(event.target.value)}
+                  placeholder="例如：我想制作一个校园失物招领系统"
+                  rows={2}
+                />
+                <input
+                  aria-label="第一阶段约束"
+                  value={discussionConstraints}
+                  onChange={(event) => setDiscussionConstraints(event.target.value)}
+                  placeholder="可选约束，例如首期只做 MVP"
+                />
+                <div className="workbench-actions">
+                  <button onClick={() => void handleCreateDiscussion()} disabled={discussionBusy || !discussionIdea.trim()}>
+                    创建讨论运行
+                  </button>
+                  <button onClick={() => void handleAdvanceDiscussion()} disabled={discussionBusy || !discussion}>
+                    运行到需求确认
+                  </button>
+                  <button onClick={() => void handleConfirmDiscussion()} disabled={discussionBusy || !discussion || discussion.stage !== 'HUMAN_CONFIRMATION'}>
+                    六人确认 R1
+                  </button>
+                  <button onClick={() => void handleBridgeDiscussion()} disabled={discussionBusy || !discussion || discussion.status !== 'COMPLETED'}>
+                    进入第二阶段
+                  </button>
+                </div>
+                {discussion && (
+                  <div className="workbench-meta">
+                    <span>{discussion.run_id}</span>
+                    <span>{discussion.stage} · {discussion.status}</span>
+                    <span>R1 {discussion.blackboard?.r1 ? '已发布' : '未发布'}</span>
+                  </div>
+                )}
+              </div>
+              <div className="workbench-card">
+                <h3>模型 API 配置</h3>
+                <p className="muted">支持 DeepSeek 和其他 OpenAI-compatible 服务。密钥只保存在当前后端进程内。</p>
+                <div className="config-grid">
+                  <input aria-label="模型 API 地址" value={llmBaseUrl} onChange={(event) => setLlmBaseUrl(event.target.value)} placeholder="https://api.deepseek.com" />
+                  <input aria-label="模型名称" value={llmModel} onChange={(event) => setLlmModel(event.target.value)} placeholder="deepseek-chat" />
+                  <input aria-label="模型 API Key" type="password" value={llmApiKey} onChange={(event) => setLlmApiKey(event.target.value)} placeholder={llmConfig?.key_configured ? '已配置，输入新 Key 可替换' : '输入 API Key'} />
+                  <button onClick={() => void handleSaveLlmConfig()} disabled={llmSaving || !llmApiKey.trim()}>{llmSaving ? '保存中…' : '保存并启用'}</button>
+                </div>
+              </div>
+              <div className="workbench-card">
+                <h3>设计规格查看</h3>
+                <p className="muted">输入第一阶段 RUN 编号，查看实际桥接后的 design spec。</p>
+                <div className="spec-source-row">
+                  <input aria-label="第一阶段运行编号" value={sourceRunId} onChange={(event) => setSourceRunId(event.target.value)} placeholder="RUN-XXXXXXXXXX" />
+                  <button onClick={() => void handleLoadDesignSpec()} disabled={specLoading || !sourceRunId.trim()}>{specLoading ? '读取中…' : '查看规格'}</button>
+                </div>
+                {designSpec && (
+                  <details className="spec-preview" open>
+                    <summary>{String(designSpec.title ?? '已加载 design spec')} · {Array.isArray(designSpec.requirements) ? designSpec.requirements.length : 0} 项需求</summary>
+                    <pre>{JSON.stringify(designSpec, null, 2)}</pre>
+                  </details>
+                )}
+              </div>
+            </div>
+            {discussionError && <div className="alert error" role="alert">{discussionError}</div>}
+          </section>
           <div className="spec-launch-bar">
             <div>
               <strong>第二阶段入口：设计规格 → PM Agent → 编排器</strong>

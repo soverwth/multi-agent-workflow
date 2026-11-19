@@ -41,6 +41,7 @@ class PhaseBridgeTests(unittest.TestCase):
         self.assertEqual("制作一个通用协作系统", spec["title"])
         self.assertEqual(run["run_id"], spec["phase1_source"]["run_id"])
         self.assertEqual("R1", spec["phase1_source"]["r1_version"])
+        self.assertIn(spec["generation_source"], {"local-heuristic", "unknown"})
         self.assertEqual(len(run["blackboard"]["r1"]["requirements"]), len(spec["requirements"]))
         self.assertEqual(len(spec["requirements"]), len(spec["design_entries"]))
         self.assertTrue(all(item["req_refs"] for item in spec["design_entries"]))

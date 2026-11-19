@@ -161,6 +161,10 @@ async function verifySuccess(cdp) {
 
   const text = await page.evaluate('document.body.innerText');
   check(text.includes('开发任务 DAG'), '标题渲染');
+  check(text.includes('统一 SE Workflow 工作台'), '统一工作台渲染');
+  check(text.includes('用户想法'), '第一阶段输入入口渲染');
+  check(text.includes('模型 API 配置'), '模型 API 配置入口渲染');
+  check(text.includes('设计规格查看'), '设计规格查看入口渲染');
   for (const label of ['已生成', '就绪', '执行中', '等依赖', '验收中', '失败', '重试中', '已阻塞', '已通过']) {
     check(text.includes(label), `九态图例含「${label}」`);
   }

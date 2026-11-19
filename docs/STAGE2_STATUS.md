@@ -15,7 +15,8 @@
 与第一阶段的连接也已补齐：已确认的 B02 R1 可通过 `/api/runs/{run_id}/design-spec`
 导出为 B01 设计规格，或通过 `/api/task-runs/from-discussion` 直接创建第二阶段运行。
 第二阶段还支持直接提交任意 JSON/Markdown design spec；B05 页面提供生成运行、单步推进和
-运行至完成控制。
+运行至完成控制。B05 统一工作台还可以在同一页创建第一阶段运行、配置模型 API、查看 design spec
+并进入第二阶段。
 
 | 任务 | 内容 | 实现位置 | 状态 |
 | --- | --- | --- | --- |
@@ -37,6 +38,12 @@
 | B06-D28 | 依赖环与重复产物校验 | `multiagent_quality/task_gate.py` | 完成 |
 | B06-D29 | 日志/产物哈希与测试编号 | `multiagent_quality/task_gate.py` | 完成 |
 | B06-D30 | 提交引用与版本一致性 | `multiagent_quality/task_gate.py` | 完成 |
+
+### 近期补全
+
+- 第一阶段需求草案支持 OpenAI-compatible API，默认 DeepSeek 配置，并保留无密钥时的领域规则兜底。
+- 本地兜底会根据聊天社交、失物招领、设备预约和通用系统生成不同的需求数量与内容。
+- B05 增加统一 SE Workflow 工作台、模型配置、第一阶段运行控制和 design spec JSON 查看。
 
 ## 二、关键设计决定
 
@@ -87,7 +94,7 @@ npm run build && npm run lint
 node tests/ui_smoke.mjs http://127.0.0.1:4321
 ```
 
-最近一次完整检查结果：B01 44 / B02 104 / B03 37 / B04 664（1 项 docker 跳过）/ B06 75 /
+最近一次完整检查结果：B01 44 / B02 107 / B03 37 / B04 664（1 项 docker 跳过）/ B06 75 /
 闭环 13 项测试通过；`verify_contracts` 6/6；`run_all_checks` 15/15；
 前端 build + lint 通过；浏览器冒烟覆盖讨论流程、真实任务接口、响应式布局和错误隔离。
 

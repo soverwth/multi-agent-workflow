@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from .errors import AgentExecutionError, WorkflowError
+from .llm import OpenAICompatibleClient
 
 ROLES = ("产品经理", "用户研究员", "技术架构师", "质疑者")
 MEMBERS = ("成员 A", "成员 B", "成员 C", "成员 D", "成员 E", "成员 F")
@@ -127,16 +130,107 @@ class ConsensusEvaluator:
 
 
 class RequirementGateway:
-    """B01 boundary: prepare a draft and enforce the independent six-person confirmation gate."""
+    """B01 boundary with an optional structured LLM and a local fallback.
+
+    The fallback is intentionally domain-sensitive so the prototype remains
+    useful without credentials.  When an OpenAI-compatible API is configured,
+    the model supplies the requirements and the same validation gate still
+    requires six independent human confirmations.
+    """
+
+    def __init__(self, llm_client: OpenAICompatibleClient | None = None):
+        self.llm_client = llm_client or OpenAICompatibleClient()
 
     def prepare_draft(self, blackboard: dict) -> dict:
+        if self.llm_client.enabled():
+            return self._prepare_with_llm(blackboard)
+        return self._prepare_locally(blackboard)
+
+    def _prepare_with_llm(self, blackboard: dict) -> dict:
+        system = (
+            "你是软件工程需求分析 Agent。请把用户想法转换成可执行的 MVP 需求。"
+            "只输出 JSON 对象，字段为 requirements 和 open_questions。"
+            "requirements 必须是 2 到 8 项，每项包含 req_id、description、priority、"
+            "acceptance 和 constraints。acceptance 必须是可观察的验收条件。"
+        )
+        user = {
+            "idea": blackboard.get("idea", ""),
+            "constraints": blackboard.get("constraints", ""),
+            "problem": blackboard.get("problem", ""),
+            "proposal": blackboard.get("proposal_draft", ""),
+            "claims": blackboard.get("claims", []),
+            "objections": blackboard.get("objections", []),
+            "open_questions": blackboard.get("open_questions", []),
+        }
+        result = self.llm_client.complete_json(system=system, user=json.dumps(user, ensure_ascii=False))
+        requirements = self._normalize_requirements(result.get("requirements"))
+        return self._draft(requirements, blackboard, source="llm")
+
+    def _prepare_locally(self, blackboard: dict) -> dict:
+        idea = str(blackboard.get("idea") or "通用软件系统")
+        normalized = idea.lower()
+        if any(token in normalized for token in ("微信", "聊天", "社交", "即时消息", "通讯")):
+            requirements = [
+                {"req_id": "REQ-01", "description": "用户可以安全注册、登录并管理个人资料。", "priority": "Must", "acceptance": ["注册和登录成功后生成会话", "错误凭据不会建立会话"]},
+                {"req_id": "REQ-02", "description": "用户可以搜索、添加和管理联系人关系。", "priority": "Must", "acceptance": ["联系人搜索结果可分页", "重复添加不会产生重复关系"]},
+                {"req_id": "REQ-03", "description": "联系人之间可以发送、接收并查看消息。", "priority": "Must", "acceptance": ["消息发送后可在会话中查询", "消息失败时返回可识别错误"]},
+                {"req_id": "REQ-04", "description": "系统需要提供消息隐私、举报和内容安全边界。", "priority": "Should", "acceptance": ["未授权用户不能读取他人会话", "举报记录可追溯"]},
+            ]
+        elif any(token in normalized for token in ("失物", "招领", "物品", "认领")):
+            requirements = [
+                {"req_id": "REQ-01", "description": "用户可以发布带图片、位置和时间的物品信息。", "priority": "Must", "acceptance": ["缺失必要字段时拒绝发布", "发布记录可查询"]},
+                {"req_id": "REQ-02", "description": "用户可以按关键词和状态搜索公开物品信息。", "priority": "Must", "acceptance": ["搜索结果支持分页", "已关闭记录不会出现在默认结果"]},
+                {"req_id": "REQ-03", "description": "用户可以提交、审核和处理认领申请。", "priority": "Must", "acceptance": ["本人不能认领本人发布的物品", "申请状态变化可追踪"]},
+                {"req_id": "REQ-04", "description": "系统需要保护联系方式和操作权限。", "priority": "Must", "acceptance": ["未授权用户不能查看私密字段", "越权操作返回明确错误"]},
+                {"req_id": "REQ-05", "description": "认领完成后系统应通知相关用户并关闭物品状态。", "priority": "Should", "acceptance": ["认领结果会通知发布者和申请者", "完成后的物品不会再次进入待认领列表"]},
+            ]
+        elif any(token in normalized for token in ("预约", "设备", "借用", "实验室", "会议室")):
+            requirements = [
+                {"req_id": "REQ-01", "description": "管理员可以维护可预约资源及其可用状态。", "priority": "Must", "acceptance": ["资源编号唯一", "停用资源不能被预约"]},
+                {"req_id": "REQ-02", "description": "用户可以查询时间段并提交资源预约。", "priority": "Must", "acceptance": ["冲突时间段不能重复预约", "预约状态可查询"]},
+                {"req_id": "REQ-03", "description": "管理员可以审核、批准或拒绝预约申请。", "priority": "Must", "acceptance": ["审批结果记录操作人和时间", "拒绝时返回原因"]},
+            ]
+        else:
+            requirements = [
+                {"req_id": "REQ-01", "description": f"用户可以进入 {idea} 的核心业务流程。", "priority": "Must", "acceptance": ["核心流程可以从入口开始并到达完成状态"]},
+                {"req_id": "REQ-02", "description": "系统可以保存核心业务数据并支持查询。", "priority": "Must", "acceptance": ["数据保存后可按主要字段查询", "无效数据不会写入"]},
+                {"req_id": "REQ-03", "description": "系统为关键操作提供权限和失败处理。", "priority": "Must", "acceptance": ["未授权操作被拒绝", "失败响应包含可识别错误"]},
+            ]
+        return self._draft(requirements, blackboard, source="local-heuristic")
+
+    @staticmethod
+    def _normalize_requirements(raw: object) -> list[dict]:
+        if not isinstance(raw, list) or not 2 <= len(raw) <= 8:
+            raise AgentExecutionError("大模型返回的 requirements 必须是 2—8 项数组。")
+        normalized: list[dict] = []
+        seen: set[str] = set()
+        for index, item in enumerate(raw, 1):
+            if not isinstance(item, dict):
+                raise AgentExecutionError(f"大模型需求第 {index} 项不是对象。")
+            req_id = str(item.get("req_id") or f"REQ-{index:02d}").strip()
+            description = str(item.get("description") or item.get("title") or "").strip()
+            acceptance = item.get("acceptance")
+            if isinstance(acceptance, str):
+                acceptance = [acceptance]
+            if req_id in seen or not description or not isinstance(acceptance, list) or not acceptance:
+                raise AgentExecutionError(f"大模型需求第 {index} 项缺少唯一编号、描述或验收条件。")
+            seen.add(req_id)
+            normalized.append({
+                "req_id": req_id,
+                "description": description,
+                "priority": str(item.get("priority") or "Must").title(),
+                "acceptance": [str(value).strip() for value in acceptance if str(value).strip()],
+                "constraints": [str(value).strip() for value in (item.get("constraints") or []) if str(value).strip()],
+            })
+        if any(not item["acceptance"] for item in normalized):
+            raise AgentExecutionError("大模型需求包含空验收条件。")
+        return normalized
+
+    @staticmethod
+    def _draft(requirements: list[dict], blackboard: dict, *, source: str) -> dict:
         return {
-            "version": "R-draft", "status": "IN_REVIEW",
-            "requirements": [
-                {"req_id": "REQ-01", "description": "核心流程必须限定在已评审的 MVP 范围内。", "priority": "Must", "acceptance": "范围外功能不进入当前基线。", "status": "IN_REVIEW"},
-                {"req_id": "REQ-02", "description": "关键假设、风险和未决分歧必须保留并可追溯。", "priority": "Must", "acceptance": "报告可查看未决项、少数意见及处理状态。", "status": "IN_REVIEW"},
-                {"req_id": "REQ-03", "description": "核心行为的验收条件必须可观察。", "priority": "Must", "acceptance": "每项需求均有明确验收条件并经六人确认。", "status": "IN_REVIEW"},
-            ],
+            "version": "R-draft", "status": "IN_REVIEW", "generation_source": source,
+            "requirements": [{**item, "status": "IN_REVIEW"} for item in requirements],
             "open_questions": list(blackboard["open_questions"]),
             "decision_refs": [item["decision_id"] for item in blackboard["decisions"]],
         }
@@ -151,4 +245,10 @@ class RequirementGateway:
         confirmed = list(requirements)
         for item in confirmed:
             item["status"] = "CONFIRMED"
-        return {"version": "R1", "status": "CONFIRMED", "requirements": confirmed, "confirmed_by": list(members)}
+        return {
+            "version": "R1",
+            "status": "CONFIRMED",
+            "requirements": confirmed,
+            "generation_source": str(draft.get("generation_source") or "unknown"),
+            "confirmed_by": list(members),
+        }

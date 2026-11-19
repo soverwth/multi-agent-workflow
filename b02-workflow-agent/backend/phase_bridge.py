@@ -74,6 +74,7 @@ def r1_to_design_spec(run: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "schema_version": "b01.spec.v1",
+        "generation_source": str(r1.get("generation_source") or "unknown"),
         "spec_version": spec_version,
         "contract_version": contract_version,
         "project_id": project_id,
@@ -90,6 +91,7 @@ def r1_to_design_spec(run: dict[str, Any]) -> dict[str, Any]:
         "phase1_source": {
             "run_id": run["run_id"],
             "r1_version": r1.get("version", "R1"),
+            "generation_source": str(r1.get("generation_source") or "unknown"),
             "confirmed_by": list(r1.get("confirmed_by") or []),
         },
     }

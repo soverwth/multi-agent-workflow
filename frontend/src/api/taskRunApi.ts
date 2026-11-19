@@ -83,6 +83,26 @@ export interface CreateRunFromSpecConfig {
   discussionRunId?: string;
 }
 
+export interface DiscussionRun {
+  run_id: string;
+  idea: string;
+  constraints: string;
+  stage: string;
+  status: string;
+  round: number;
+  blackboard: Record<string, any>;
+  latest_consensus?: Record<string, unknown> | null;
+}
+
+export interface LlmConfigStatus {
+  enabled: boolean;
+  provider: string;
+  base_url: string;
+  model: string;
+  key_configured: boolean;
+  timeout_seconds: number;
+}
+
 export interface TaskApiResult {
   tasks: Task[];
   meta: {
@@ -217,6 +237,71 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     throw new Error(detail);
   }
   return (await response.json()) as T;
+}
+
+export async function fetchLlmConfig(baseUrl: string): Promise<LlmConfigStatus> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await fetchJson<{ llm: LlmConfigStatus }>(`${base}/api/llm/config`);
+  return response.llm;
+}
+
+export async function updateLlmConfig(
+  baseUrl: string,
+  config: Partial<Pick<LlmConfigStatus, 'base_url' | 'model' | 'enabled'>> & { api_key?: string },
+): Promise<LlmConfigStatus> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await postJson<{ llm: LlmConfigStatus }>(`${base}/api/llm/config`, config);
+  return response.llm;
+}
+
+export async function createDiscussionRun(
+  baseUrl: string,
+  idea: string,
+  constraints = '',
+): Promise<DiscussionRun> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await postJson<{ run: DiscussionRun }>(`${base}/api/runs`, { idea, constraints });
+  return response.run;
+}
+
+export async function fetchDiscussionRun(baseUrl: string, runId: string): Promise<DiscussionRun> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await fetchJson<{ run: DiscussionRun }>(`${base}/api/runs/${encodeURIComponent(runId)}`);
+  return response.run;
+}
+
+export async function advanceDiscussion(baseUrl: string, runId: string): Promise<DiscussionRun> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await postJson<{ run: DiscussionRun }>(
+    `${base}/api/runs/${encodeURIComponent(runId)}/until-control-point`,
+    {},
+  );
+  return response.run;
+}
+
+export async function confirmDiscussion(baseUrl: string, runId: string, members: string[]): Promise<DiscussionRun> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await postJson<{ run: DiscussionRun }>(
+    `${base}/api/runs/${encodeURIComponent(runId)}/confirm`,
+    { members },
+  );
+  return response.run;
+}
+
+export async function fetchDesignSpec(baseUrl: string, runId: string): Promise<Record<string, any>> {
+  const base = baseUrl.replace(/\/+$/, '');
+  const response = await fetchJson<{ design_spec: Record<string, any> }>(
+    `${base}/api/runs/${encodeURIComponent(runId)}/design-spec`,
+  );
+  return response.design_spec;
+}
+
+export async function createTaskRunFromDiscussion(
+  baseUrl: string,
+  discussionRunId: string,
+): Promise<{ plan: { plan_id: string; plan_version: string; task_count: number }; run: RunSnapshot; source: Record<string, any> }> {
+  const base = baseUrl.replace(/\/+$/, '');
+  return postJson(`${base}/api/task-runs/from-discussion`, { discussion_run_id: discussionRunId });
 }
 
 export async function createTaskRunFromSpec(config: CreateRunFromSpecConfig): Promise<{

@@ -35,6 +35,11 @@
 `GET /api/runs/{run_id}/design-spec` 查看 B01 可消费的设计规格。阶段二也可以直接使用
 JSON/Markdown 设计规格，不依赖校园案例。
 
+第一阶段的 R1 需求支持 OpenAI-compatible API。默认没有密钥时会使用本地领域规则生成需求，
+配置 `SE_WORKFLOW_LLM_API_KEY`、`SE_WORKFLOW_LLM_BASE_URL`、`SE_WORKFLOW_LLM_MODEL` 后，
+`RequirementGateway` 会调用模型并校验结构化 JSON。B05 统一工作台也可以在运行时配置模型。
+详见 [`docs/LLM_INTEGRATION.md`](../docs/LLM_INTEGRATION.md)。
+
 示例（B02 启动后）：
 
 ```bash
