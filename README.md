@@ -162,6 +162,7 @@ B05 现在还提供“统一 SE Workflow 工作台”。可以在同一页面输
 推进到需求确认、发布六人确认的 R1、查看桥接后的 design spec，并直接进入第二阶段任务编排。
 工作台的“模型 API 配置”支持 DeepSeek 和其他 OpenAI-compatible 服务。没有 API Key 时，
 系统使用领域规则兜底，聊天社交、失物招领、设备预约和通用系统会生成不同的 R1 需求集合。
+任务计划同时提供依赖 DAG 和甘特排期视图，并可导出 `workflow.json` 与 `task.md`。
 完整配置方式见 [大模型 API 接入说明](docs/LLM_INTEGRATION.md)。
 
 ## 课堂展示：从用户想法到任务 DAG

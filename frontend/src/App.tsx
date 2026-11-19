@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { loadSimulationRun, listSimulationRuns, type SimulationRun } from './data/simulationRuns';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { TaskGraph } from './components/TaskGraph';
+import { TaskTimeline } from './components/TaskTimeline';
 import { ALL_STATUSES, statusColors, statusLabels } from './constants/status';
 import {
   advanceDiscussion,
@@ -22,7 +23,9 @@ import {
   exportDefects,
   exportRunReport,
   exportSnapshot,
+  exportTaskMarkdown,
   exportTraceability,
+  exportWorkflow,
   type ExportContext,
 } from './utils/export';
 import './App.css';
@@ -61,6 +64,7 @@ function App() {
   const [source, setSource] = useState<DataSource>('simulation');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [planView, setPlanView] = useState<'dag' | 'timeline'>('dag');
 
   // 模拟数据源：选择由真实编排器跑出的历史运行
   const runs = useMemo(() => listSimulationRuns(), []);
@@ -453,6 +457,8 @@ function App() {
             <div className="exports">
               <span className="exports-label">成果导出</span>
               <button onClick={() => exportSnapshot(tasks, buildExportContext())}>快照 JSON</button>
+              <button onClick={() => exportWorkflow(tasks, buildExportContext())}>workflow.json</button>
+              <button onClick={() => exportTaskMarkdown(tasks, buildExportContext())}>task.md</button>
               <button onClick={() => exportTraceability(tasks, buildExportContext())}>追溯表 CSV</button>
               <button onClick={() => exportDefects(tasks, buildExportContext())}>缺陷清单</button>
               <button onClick={() => exportRunReport(tasks, reportLogs, reportAcks, buildExportContext())}>运行报告</button>
@@ -470,7 +476,13 @@ function App() {
           )}
 
           <div className="graph-area">
-            <div className="legend">
+            <div className="plan-view-switch" role="group" aria-label="任务计划视图">
+              <strong>任务计划视图</strong>
+              <button className={planView === 'dag' ? 'active' : ''} onClick={() => setPlanView('dag')}>依赖 DAG</button>
+              <button className={planView === 'timeline' ? 'active' : ''} onClick={() => setPlanView('timeline')}>甘特排期</button>
+              <span>{tasks.length} 个任务 · {new Set(tasks.flatMap((task) => task.depends_on)).size} 条依赖引用</span>
+            </div>
+            {planView === 'dag' && <div className="legend">
               <strong>状态图例：</strong>
               {ALL_STATUSES.map((status) => (
                 <span key={status} className="legend-item">
@@ -478,7 +490,7 @@ function App() {
                   {statusLabels[status]}
                 </span>
               ))}
-            </div>
+            </div>}
 
             <div className="canvas">
               {tasks.length === 0 ? (
@@ -487,11 +499,20 @@ function App() {
                     ? '尚未加载真实任务运行：请输入运行编号后点击「加载运行」。'
                     : '正在等待任务数据…'}
                 </div>
-              ) : (
+              ) : planView === 'dag' ? (
                 <TaskGraph
                   tasks={tasks}
                   selectedId={selectedId}
                   onNodeClick={(task) => {
+                    setSelectedId(task.task_id);
+                    setPanelOpen(true);
+                  }}
+                />
+              ) : (
+                <TaskTimeline
+                  tasks={tasks}
+                  selectedId={selectedId}
+                  onTaskClick={(task) => {
                     setSelectedId(task.task_id);
                     setPanelOpen(true);
                   }}

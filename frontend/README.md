@@ -34,6 +34,10 @@ python -m backend.app --host 127.0.0.1 --port 7100
 工作台的模型 API 配置可以启用 DeepSeek 或其他 OpenAI-compatible 服务。没有密钥时使用本地
 领域规则，仍会根据不同想法生成不同需求集合。接口和环境变量见 [`docs/LLM_INTEGRATION.md`](../docs/LLM_INTEGRATION.md)。
 
+任务区域支持“依赖 DAG”和“甘特排期”两种计划视图。甘特视图按照任务依赖层级呈现开始位置、
+估计时长、状态颜色和前置任务。成果导出包含快照 JSON、`workflow.json`、`task.md`、追溯表 CSV、
+缺陷清单和运行报告。
+
 ## 数据源
 
 | 模式 | 数据来源 | 说明 |

@@ -127,3 +127,51 @@ export function exportRunReport(tasks: Task[], logs: LogEntry[], acks: AckEntry[
   };
   download(`run-report-${ctx.source}-${stamp()}.json`, JSON.stringify(payload, null, 2), 'application/json');
 }
+
+/** 导出当前任务计划，便于交给其他编排器或评审模块。 */
+export function exportWorkflow(tasks: Task[], ctx: ExportContext) {
+  const workflow = {
+    schema_version: 'b05.workflow.v1',
+    data_source: ctx.source,
+    run_id: ctx.runId,
+    spec_version: ctx.specVersion,
+    contract_version: ctx.contractVersion,
+    tasks: tasks.map((task) => ({
+      task_id: task.task_id,
+      goal: task.goal,
+      block_id: task.block_id,
+      role_id: task.role_id,
+      req_refs: task.req_refs,
+      design_refs: task.design_refs,
+      depends_on: task.depends_on,
+      acceptance: task.acceptance,
+      required_test_ids: task.required_test_ids,
+      status: task.status,
+    })),
+  };
+  download(`workflow-${ctx.source}-${stamp()}.json`, JSON.stringify(workflow, null, 2), 'application/json');
+}
+
+/** 导出适合评审和交接的任务 Markdown。 */
+export function exportTaskMarkdown(tasks: Task[], ctx: ExportContext) {
+  const lines = [
+    '# 开发任务计划',
+    '',
+    `- 运行编号：${ctx.runId}`,
+    `- 规格版本：${ctx.specVersion}`,
+    `- 数据来源：${ctx.source}`,
+    '',
+    '| 任务 | 负责 Block | 目标 | 前置任务 | 状态 |',
+    '|---|---|---|---|---|',
+    ...tasks.map((task) => `| ${task.task_id} | ${task.block_id ?? ''} | ${task.goal.replace(/\|/g, '\\|')} | ${task.depends_on.join(', ') || '—'} | ${task.status} |`),
+    '',
+    '## 验收条件',
+    '',
+    ...tasks.flatMap((task) => [
+      `### ${task.task_id}`,
+      ...(task.acceptance?.length ? task.acceptance.map((item) => `- ${item}`) : ['- 未声明']),
+      '',
+    ]),
+  ];
+  download(`task-${ctx.source}-${stamp()}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
+}

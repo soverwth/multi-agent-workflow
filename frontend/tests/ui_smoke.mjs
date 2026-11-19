@@ -165,6 +165,9 @@ async function verifySuccess(cdp) {
   check(text.includes('用户想法'), '第一阶段输入入口渲染');
   check(text.includes('模型 API 配置'), '模型 API 配置入口渲染');
   check(text.includes('设计规格查看'), '设计规格查看入口渲染');
+  check(text.includes('甘特排期'), '甘特排期入口渲染');
+  check(text.includes('workflow.json'), 'workflow.json 导出入口渲染');
+  check(text.includes('task.md'), 'task.md 导出入口渲染');
   for (const label of ['已生成', '就绪', '执行中', '等依赖', '验收中', '失败', '重试中', '已阻塞', '已通过']) {
     check(text.includes(label), `九态图例含「${label}」`);
   }
@@ -178,6 +181,11 @@ async function verifySuccess(cdp) {
 
   const badNodes = await page.evaluate(`document.querySelectorAll('.react-flow__node').length - 24`);
   check(badNodes === 0, `节点数与计划一致 = 24（偏差 ${badNodes}）`);
+
+  await page.evaluate(`Array.from(document.querySelectorAll('.plan-view-switch button')).find((button) => button.textContent.includes('甘特排期'))?.click()`);
+  await sleep(500);
+  const timelineRows = await page.evaluate(`document.querySelectorAll('.timeline-row').length`);
+  check(timelineRows === 24, `甘特排期任务数量 = 24（实际 ${timelineRows}）`);
 }
 
 async function verifyFailure(cdp) {

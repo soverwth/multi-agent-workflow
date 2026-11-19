@@ -204,6 +204,11 @@
 
 /* ---------- Graph area ---------- */
 .graph-area { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0 20px 12px; }
+.plan-view-switch { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: #fff; border: 1px solid var(--border); border-bottom: none; border-radius: 8px 8px 0 0; font-size: 12px; flex-wrap: wrap; }
+.plan-view-switch strong { color: #334155; margin-right: 4px; }
+.plan-view-switch button { border: 1px solid #cbd5e1; background: #fff; color: #64748b; border-radius: 5px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+.plan-view-switch button.active { border-color: #2563eb; background: #2563eb; color: #fff; font-weight: 600; }
+.plan-view-switch span { color: #94a3b8; margin-left: auto; font-family: ui-monospace, monospace; font-size: 10px; }
 .legend {
   padding: 10px 14px;
   background: #fff;
@@ -221,6 +226,18 @@
 
 .canvas { flex: 1; background: #fff; border: 1px solid var(--border); border-top: none; min-height: 0; }
 .canvas-empty { display: flex; height: 100%; justify-content: center; align-items: center; color: var(--muted); }
+.timeline-wrap { height: 100%; overflow: auto; min-width: 760px; padding: 10px 14px 20px; }
+.timeline-header, .timeline-row { display: grid; grid-template-columns: 310px minmax(430px, 1fr); gap: 10px; align-items: center; }
+.timeline-header { padding: 0 8px 8px; color: #64748b; font-size: 11px; border-bottom: 1px solid var(--border); }
+.timeline-scale { display: flex; justify-content: space-between; color: #94a3b8; font-family: ui-monospace, monospace; }
+.timeline-rows { display: flex; flex-direction: column; }
+.timeline-row { width: 100%; padding: 8px; border: none; border-bottom: 1px solid #f1f5f9; background: #fff; text-align: left; cursor: pointer; }
+.timeline-row:hover, .timeline-row.selected { background: #eff6ff; }
+.timeline-label { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.timeline-label strong { color: #334155; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timeline-label small { color: #94a3b8; font-size: 10px; }
+.timeline-track { position: relative; height: 27px; border-left: 1px solid #cbd5e1; border-right: 1px solid #e2e8f0; background: repeating-linear-gradient(to right, transparent 0, transparent calc(20% - 1px), #f1f5f9 calc(20% - 1px), #f1f5f9 20%); }
+.timeline-bar { position: absolute; top: 5px; height: 17px; min-width: 32px; border-radius: 4px; color: #fff; font: 10px/17px ui-monospace, monospace; text-align: center; box-shadow: 0 1px 2px #cbd5e1; }
 
 .agent-bar {
   padding: 10px 14px;
