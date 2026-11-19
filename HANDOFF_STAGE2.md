@@ -50,7 +50,7 @@ Project checks      | integration | completed/success
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | B01 | `cd b01-spec-planner; python -m pytest -q` | **43 passed** |
-| B02 | `cd b02-workflow-agent; python -m unittest discover -s tests` | **100 tests OK** |
+| B02 | `cd b02-workflow-agent; python -m unittest discover -s tests` | **110 tests OK** |
 | B03 | `python -m pytest b03/b03_implementation -q` | **37 passed** |
 | B04 | `cd b04-agent-integration; python -m pytest -q` | **664 passed, 1 skipped**（docker） |
 | B06 | `cd b06-quality-consensus; python -m pytest -q` | **75 passed** |
@@ -59,9 +59,9 @@ Project checks      | integration | completed/success
 | 最终验收 | `python workflow_runtime/verify_acceptance.py` | **13/13 通过** |
 | 全量 | `python workflow_runtime/run_all_checks.py` | **15/15 步骤通过** |
 | 前端 | `npm run build` / `npm run lint` | 构建成功 / **0 warning 0 error** |
-| 前端 UI | `node tests/ui_smoke.mjs http://127.0.0.1:4321` | **35 项检查通过** |
+| 前端 UI | `node tests/ui_smoke.mjs http://127.0.0.1:7100` | **35 项检查通过** |
 
-> 注意：B02 之前报 97，现在是 100——因为后来补了 3 个 CORS 测试。
+> 注意：B02 当前为 110 项；本轮新增 3 项 B05 构建资源与单端口回退测试。
 
 ---
 
@@ -415,22 +415,19 @@ python -m workflow_runtime pipeline --scenario blocked    # 执行阻断传播
 python -m workflow_runtime pipeline --scenario evidence    # 缺证据被驳回
 ```
 
-前端（需要真实浏览器验证，不要只靠 build 通过）：
+前端（正式集成运行只使用 B02 的 7100 端口；需要真实浏览器验证，不要只靠 build 通过）：
 
 ```powershell
-# 终端 1：B02
-cd b02-workflow-agent; python -m backend.app --host 127.0.0.1 --port 7100
-
-# 终端 2：前端
+# 构建 B05，然后启动唯一的 B02/B05 服务
 cd frontend; npm ci; npm run build
-npx --no-install vite preview --host 127.0.0.1 --port 4321
+cd ..\b02-workflow-agent; python -m backend.app --host 127.0.0.1 --port 7100
 
-# 终端 3：冒烟
-cd frontend; node tests/ui_smoke.mjs http://127.0.0.1:4321
+# 另开终端执行冒烟
+cd frontend; node tests/ui_smoke.mjs http://127.0.0.1:7100
 ```
 
-**注意**：`npm run dev`（5173）与 `vite preview`（4321）都能用，
-但 `ui_smoke.mjs` 里的断言依赖 `vite preview` 的产物。
+**注意**：`npm run dev`（5173）仍可用于前端热更新，但正式演示和验收使用
+`http://127.0.0.1:7100/`，避免 B02 与 B05 分别占用端口。
 
 ---
 

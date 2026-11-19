@@ -88,13 +88,18 @@ python -m workflow_runtime pipeline --scenario retry
 python -m workflow_runtime pipeline --scenario blocked
 python -m workflow_runtime pipeline --scenario evidence
 
-# 前端
+# 前端构建（集成运行由 B02 托管，统一使用 7100）
 cd frontend
 npm run build && npm run lint
-node tests/ui_smoke.mjs http://127.0.0.1:4321
+cd ../b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
+
+# 另开终端执行浏览器冒烟
+cd ../frontend
+node tests/ui_smoke.mjs http://127.0.0.1:7100
 ```
 
-最近一次完整检查结果：B01 44 / B02 107 / B03 37 / B04 664（1 项 docker 跳过）/ B06 75 /
+最近一次完整检查结果：B01 44 / B02 110 / B03 37 / B04 664（1 项 docker 跳过）/ B06 75 /
 闭环 13 项测试通过；`verify_contracts` 6/6；`run_all_checks` 15/15；
 前端 build + lint 通过；浏览器冒烟覆盖讨论流程、真实任务接口、响应式布局和错误隔离。
 

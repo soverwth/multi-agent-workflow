@@ -8,21 +8,39 @@
 
 ## 运行
 
+### 集成运行（推荐，B02/B05 共用 7100 端口）
+
+生产构建由 B02 的 HTTP 服务托管，页面和 API 使用同源地址：
+
 ```bash
 npm ci
-npm run dev
-```
+npm run build
 
-浏览器打开 Vite 提示的地址（默认 http://localhost:5173）。
-
-如果要用真实接口，先启动 B02 后端：
-
-```bash
 cd ../b02-workflow-agent
 python -m backend.app --host 127.0.0.1 --port 7100
 ```
 
-然后在界面顶部切到「真实接口」，填入 B02 地址与运行编号（`TASK-RUN-…`），
+浏览器打开 `http://127.0.0.1:7100/`。前端构建产物位于 `frontend/dist`，
+B02 会优先提供该目录；如果尚未构建，B02 仍会回退到自己的演示页面。
+
+### 独立开发（可选，保留 Vite 热更新）
+
+需要修改前端时可以单独启动 Vite。`vite.config.ts` 会把 `/api` 和 `/ws` 转发到
+7100，因此仍然只把 B02 作为后端服务：
+
+```bash
+# 终端一
+cd ../b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
+
+# 终端二
+cd ../frontend
+npm run dev
+```
+
+此模式默认打开 Vite 提示的地址（通常为 `http://localhost:5173`），仅用于开发热更新。
+
+在集成运行页面切到「真实接口」后，B02 地址填写 `http://127.0.0.1:7100`，再填入运行编号（`TASK-RUN-…`），
 点击「加载运行」。运行编号需要先在 B02 中创建（见 `b02-workflow-agent/README.md`）。
 
 也可以直接在页面的“第二阶段入口：设计规格 → PM Agent → 编排器”输入设计规格路径，
@@ -73,9 +91,15 @@ npm run lint      # oxlint
 
 ```bash
 npm run build
-npx vite preview --host 127.0.0.1 --port 4321 &
-node tests/ui_smoke.mjs http://127.0.0.1:4321
+cd ../b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
+
+# 另开终端
+cd ../frontend
+node tests/ui_smoke.mjs http://127.0.0.1:7100
 ```
+
+如只验证前端静态产物，也可以用 `vite preview` 临时占用 4321；这不属于正式集成运行。
 
 覆盖内容：DAG 渲染、九态图例、切换到失败场景后的阻塞节点、
 任务详情面板的八个区块、真实接口未连接时的错误提示且不渲染模拟节点。
@@ -83,7 +107,7 @@ node tests/ui_smoke.mjs http://127.0.0.1:4321
 界面截图（输出到指定目录）：
 
 ```bash
-node tests/screenshots.mjs http://127.0.0.1:4321 shots
+node tests/screenshots.mjs http://127.0.0.1:7100 shots
 ```
 
 ## 目录

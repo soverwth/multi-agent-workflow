@@ -31,8 +31,13 @@ import {
 import './App.css';
 import type { AckEntry, LogEntry } from './hooks/useTaskWebSocket';
 
-/** 真实接口默认地址：B02 任务编排服务。 */
-const DEFAULT_API_BASE = 'http://127.0.0.1:7100';
+/**
+ * 真实接口默认使用当前页面的 origin。
+ *
+ * 集成运行时 B02 同时托管 B05 构建产物，因此浏览器只需要访问
+ * http://127.0.0.1:7100；保留环境变量覆盖，便于可选的独立 Vite 联调。
+ */
+const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE || window.location.origin;
 const CONFIRMATION_MEMBERS = ['成员 A', '成员 B', '成员 C', '成员 D', '成员 E', '成员 F'];
 
 type ReportEvent = Pick<RunEvent, 'sequence' | 'type' | 'task_id' | 'occurred_at'> & { event_id?: string };

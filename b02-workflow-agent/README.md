@@ -81,11 +81,25 @@ curl http://127.0.0.1:7100/api/task-runs/TASK-RUN-XXXXXXXX/dag
 
 环境：Python 3.10+、Node.js 18+（仅运行脚本和浏览器测试需要 Node）。运行时无第三方 Python 或前端依赖。
 
+正式集成运行时，先构建 B05，再由本服务在同一端口托管页面与 API：
+
+```bash
+cd ../frontend
+npm ci
+npm run build
+cd ../b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
+```
+
+浏览器打开 `http://127.0.0.1:7100/`。B05 构建目录默认是 `../frontend/dist`，也可以通过
+`--frontend-dir` 指定其他构建目录。
+
 ```bash
 npm run dev
 ```
 
-打开 `http://localhost:7100/`。也支持转发主机和端口参数：
+`npm run dev` 只启动 B02 服务（适合后端测试）；如果已经执行过 `npm run build`，打开
+`http://localhost:7100/` 即可看到 B05 页面。也支持转发主机和端口参数：
 
 ```bash
 npm run dev -- --host 127.0.0.1 --port 7100

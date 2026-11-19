@@ -20,6 +20,21 @@ python -m workflow_runtime pipeline --scenario evidence
 `verify_contracts.py` 与 CI 中 `Integration checks` 的
 `Verify second-stage closed loop` 步骤是同一个脚本，因此本地通过即代表 CI 该步通过。
 
+## B02/B05 单端口运行
+
+集成演示由 B02 的 HTTP 服务同时提供 API 和 B05 页面，统一使用 `7100` 端口：
+
+```powershell
+cd frontend
+npm ci
+npm run build
+cd ..\b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
+```
+
+浏览器访问 `http://127.0.0.1:7100/`。B05 的 API 默认使用当前页面同源地址；
+单独启动 Vite 只用于热更新，不属于正式集成启动路径。
+
 ## 各工作块验证
 
 ```powershell

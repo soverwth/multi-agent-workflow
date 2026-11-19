@@ -128,24 +128,23 @@ python workflow_runtime/verify_contracts.py
 python -m workflow_runtime pipeline --scenario success
 ```
 
-## 运行项目原型
+## 运行项目原型（B02/B05 单端口）
 
-先启动 B02 后端（讨论控制器 + 任务编排 API）：
-
-```powershell
-cd b02-workflow-agent
-python -m backend.app
-```
-
-再打开另一个终端启动 B05 前端：
+B02 后端现在同时托管 B05 的生产构建产物，正式运行只需要 **7100 一个端口**：
 
 ```powershell
+# 首次运行或前端代码更新后执行一次
 cd frontend
 npm ci
-npm run dev
+npm run build
+
+# 启动统一服务
+cd ..\b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
 ```
 
-浏览器打开 Vite 输出的本地地址。
+浏览器打开 `http://127.0.0.1:7100/`。页面、B02 API 和任务编排接口均来自同一个地址，
+不再需要单独启动 5173/4321 端口。
 
 前端有两个数据源，界面会明确标注当前来源：
 
@@ -175,20 +174,18 @@ B05 现在还提供“统一 SE Workflow 工作台”。可以在同一页面输
 4. 打开 B05 前端，切换到“真实接口”，填入生成的运行编号；点击“推进一步”观察依赖逐层放行，再点击“运行至完成”。
 5. 展示任务 DAG、B01—B06 任务归属、完成计数、事件日志、质量门结果和可导出的快照/追溯表。
 
-也可以跳过第一阶段，直接演示课堂要求的核心路径。启动两个服务后，在 B05 的“第二阶段入口”保留默认规格路径，点击“从设计规格启动”，再点击“运行至完成”：
+也可以跳过第一阶段，直接演示课堂要求的核心路径。在统一页面的“第二阶段入口”保留默认规格路径，
+点击“从设计规格启动”，再点击“运行至完成”：
 
 ```powershell
-# 终端一
-cd b02-workflow-agent
-python -m backend.app --host 127.0.0.1 --port 7100
-
-# 终端二
+# 仍然只需启动一个服务
 cd frontend
-npm ci
-npm run dev -- --host 127.0.0.1 --port 4321
+npm run build
+cd ..\b02-workflow-agent
+python -m backend.app --host 127.0.0.1 --port 7100
 ```
 
-浏览器打开 `http://127.0.0.1:4321/`。默认的校园失物招领规格只是演示输入；把输入框换成任意符合
+浏览器打开 `http://127.0.0.1:7100/`。默认的校园失物招领规格只是演示输入；把输入框换成任意符合
 `docs/TASK_ORCHESTRATION.md` §2.1 的 JSON/Markdown 规格，即可生成不同项目的任务图。中文项目名称会自动生成
 ASCII 计划版本编号，原始中文标题仍保存在规格和追溯信息中。
 
