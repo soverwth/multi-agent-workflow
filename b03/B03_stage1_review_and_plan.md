@@ -61,9 +61,9 @@
 - `b03_implementation/platform_store.py`（平台核心存储，主交付）
 - `b03_implementation/migrations/004_platform_core.sql`
 - `b03_implementation/tests/test_platform_store.py`
-- `B03_数据持久化模块_数据库结构说明.md`
-- `B03_历史记录查询接口说明.md`
-- `B03_数据恢复测试报告.md`
+- `B03_db_schema.md`
+- `B03_history_query_api.md`
+- `B03_recovery_test_report.md`
 
 **不修改**：现有 `blackboard.py` / `artifact_store.py` / `campus_db.py` 的全部逻辑，避免回归。
 
