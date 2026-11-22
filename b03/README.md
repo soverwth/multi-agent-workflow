@@ -1,12 +1,13 @@
 # 第十组 · B03 黑板数据 Agent 交付包
 
 > 负责人：陈怡雯 · 角色标识：`BlackboardAgent`
-> 版本：v1.0 · 更新时间：2026-11-17
+> 版本：v2.0 · 更新时间：2026-11-22
 > 课程：软件工程与项目实践
 > 案例：校园失物招领系统（多智能体协作开发平台贯穿案例）
-> 上游基线：《第十组 设计规格与开发任务编排.docx》R1 / S1 / C1
+> 上游基线：《第十组 设计规格与开发任务编排.docx》R1 / S1 / C1；《阶段开发分工.md》
 
-本包是 B03 工作块的完整交付：设计文档、三份对接单、可运行实现、自检用例。
+本包是 B03 工作块的完整交付：设计文档、三份对接单、平台核心数据持久化实现、自检用例。
+v2.0 按《阶段开发分工.md》新增：项目维度隔离、运行/尝试历史、事件回放、按项目 checkpoint 恢复。
 
 ## 1. 交付清单
 
@@ -16,6 +17,10 @@
 | `B03-B01_规格与Schema对齐对接单_v1.0.md` | 对接 B01（蔡昀漪）：输入版本、字段边界、追溯编号，10 项待确认 |
 | `B03-B02_状态与租约接口对接单_v1.0.md` | 对接 B02（陈昱希）：接口签名、幂等、回调、租约、恢复，8 项待确认 |
 | `B03-B06_验收证据与测试数据对接单_v1.0.md` | 对接 B06（吴天昊）：证据字段、T09 覆盖、夹具隔离，9 项待确认 |
+| `B03_阶段一_现状检查与优化方案.md` | 第一阶段交付：现状、缺口、优化任务、需配合接口、测试方式 |
+| `B03_数据持久化模块_数据库结构说明.md` | platform.db 十张表结构、项目隔离设计 |
+| `B03_历史记录查询接口说明.md` | PlatformStore 全部查询接口与典型调用顺序 |
+| `B03_数据恢复测试报告.md` | 恢复机制与 9+28 项测试结果 |
 | `b03_implementation/` | 可运行实现与测试（见下） |
 
 ## 2. 目录结构
@@ -28,6 +33,10 @@
 ├── B03-B01_规格与Schema对齐对接单_v1.0.md
 ├── B03-B02_状态与租约接口对接单_v1.0.md
 ├── B03-B06_验收证据与测试数据对接单_v1.0.md
+├── B03_阶段一_现状检查与优化方案.md
+├── B03_数据持久化模块_数据库结构说明.md
+├── B03_历史记录查询接口说明.md
+├── B03_数据恢复测试报告.md
 └── b03_implementation/
     ├── __init__.py
     ├── config.py            # 双库路径、租约默认值
@@ -36,16 +45,24 @@
     ├── artifact_store.py    # artifact_store：只追加、版本绑定、快照有效才可读
     ├── task_state.py        # task_state_store：任务运行/九态/尝试历史/运行事件/检查点（D18/D19）
     ├── campus_db.py         # 案例 T02 数据层：三张表、校验、隐私视图、事务、测试数据
-    ├── run_checks.py        # 自检入口
+    ├── platform_store.py    # 平台核心存储（本阶段新增）：项目/运行/尝试/日志/产物/证据/验收/回放/恢复
+    ├── run_checks.py        # 全套自检入口
+    ├── run_platform_checks.py # 平台核心自检入口
     ├── migrations/
     │   ├── 001_create_user.sql
     │   ├── 002_create_lost_item.sql
-    │   └── 003_create_claim_application.sql
+    │   ├── 003_create_claim_application.sql
+    │   └── 004_platform_core.sql   # 平台核心十张表
     └── tests/
         ├── __init__.py
         ├── test_blackboard.py
+<<<<<<< Updated upstream
         ├── test_task_state.py
         └── test_campus_db.py
+=======
+        ├── test_campus_db.py
+        └── test_platform_store.py
+>>>>>>> Stashed changes
 ```
 
 ## 2.1 任务状态持久化（第二阶段 D18/D19）
@@ -71,13 +88,18 @@
 - Python 3.10+（开发验证版本 3.13.14）
 - **仅使用 Python 标准库**，无需 `pip install` 任何第三方包
 
-在工作区根目录执行：
+在 `b03` 目录执行：
 
 ```bash
-python -m b03_implementation.run_checks
+python -m b03_implementation.run_checks          # 全套（28 项，含平台核心）
+python -m b03_implementation.run_platform_checks # 仅平台核心（9 项）
 ```
 
+<<<<<<< Updated upstream
 预期输出：`Ran 37 tests ... OK`
+=======
+预期输出：全套 `Ran 28 tests ... OK`，平台核心 `Ran 9 tests ... OK`。
+>>>>>>> Stashed changes
 
 ## 4. 关键设计约束
 
