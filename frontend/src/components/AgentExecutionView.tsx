@@ -77,7 +77,7 @@ export function AgentExecutionView({ tasks, events, source, onSelectTask }: Prop
   return (
     <div className="stage-panel agents-stage">
       <div className="stage-panel-head">
-        <h2>05 · Agent 执行中心</h2>
+        <h2>06 · Agent 执行中心</h2>
         <p>
           按执行角色汇总任务：当前任务、真实事件日志、测试结果与异常信息都来自后端快照。
           点击任务可回到「编排与执行」查看完整详情。

@@ -2,13 +2,16 @@
  * B05 无头浏览器冒烟测试（Chrome DevTools Protocol，无第三方依赖）。
  *
  * 覆盖：
- *  1. 首屏渲染出任务 DAG（react-flow 节点数 >= 20）。
- *  2. 九态图例齐全（含 WAITING_DEPENDENCY / RETRYING）。
+ *  1. 首屏（05 编排与执行）渲染出任务 DAG（react-flow 节点数 >= 20）与九态图例。
+ *  2. 任务计划视图四个页签：依赖 DAG / 甘特排期 / 时间线 / 事件流都能渲染。
  *  3. 切换到「失败」模拟运行后出现 BLOCKED 节点与阻塞原因。
- *  4. 点击节点后详情面板展示输入/输出/依赖/验收/测试/日志/提交/缺陷。
- *  5. 切换到「真实接口」且后端不可达时显示错误，且不展示模拟数据。
+ *  4. 点击节点后详情面板展示输入/输出/依赖/验收/测试/日志/提交/缺陷 + 人工介入。
+ *  5. 八页面导航可切换，每页标题与关键区块渲染。
+ *  6. 02 项目主理人页含统一工作台（想法输入、六人确认、模型 API 状态）。
+ *  7. 04 规格与计划页含模型 API 配置、设计规格查看、从设计规格启动。
+ *  8. 切换到「真实接口」且后端不可达时显示错误，且不展示模拟数据。
  *
- * 运行：node tests/ui_smoke.mjs [http://127.0.0.1:4321]
+ * 运行：node tests/ui_smoke.mjs [http://127.0.0.1:7100]
  */
 
 import { spawn } from 'node:child_process';
@@ -115,6 +118,36 @@ async function openPage(cdp, url) {
   return page;
 }
 
+/** 点击八页面导航里的某一页。 */
+async function openStage(page, label) {
+  const clicked = await page.evaluate(`
+    (() => {
+      const item = Array.from(document.querySelectorAll('.stage-item'))
+        .find((button) => button.textContent.includes(${JSON.stringify(label)}));
+      if (!item) return false;
+      item.click();
+      return true;
+    })()
+  `);
+  await sleep(600);
+  return clicked;
+}
+
+/** 点击「任务计划视图」里的某个页签。 */
+async function openPlanView(page, label) {
+  const clicked = await page.evaluate(`
+    (() => {
+      const button = Array.from(document.querySelectorAll('.plan-view-switch button'))
+        .find((item) => item.textContent.trim() === ${JSON.stringify(label)});
+      if (!button) return false;
+      button.click();
+      return true;
+    })()
+  `);
+  await sleep(600);
+  return clicked;
+}
+
 async function main() {
   const executable = CHROME_CANDIDATES.find((candidate) => existsSync(candidate));
   if (!executable) throw new Error('未找到 Chrome/Edge 可执行文件');
@@ -138,9 +171,13 @@ async function main() {
 
   try {
     const cdp = await connect();
+    await verifyStages(cdp);
     await verifySuccess(cdp);
+    await verifyPlanViews(cdp);
     await verifyFailure(cdp);
     await verifyDetailPanel(cdp);
+    await verifyWorkbench(cdp);
+    await verifySpecPage(cdp);
     await verifyRealError(cdp);
     cdp.socket.close();
   } finally {
@@ -152,8 +189,35 @@ async function main() {
   if (failures > 0) process.exitCode = 1;
 }
 
+async function verifyStages(cdp) {
+  console.log('\n[八页面导航]');
+  const page = await openPage(cdp, BASE);
+
+  const stageCount = await page.evaluate(`document.querySelectorAll('.stage-item').length`);
+  check(stageCount === 8, `导航含 8 个页面（实际 ${stageCount}）`);
+
+  const labels = [
+    ['项目总览', '01 · 项目总览'],
+    ['项目主理人', '02 · 项目主理人'],
+    ['需求与方案', '03 · 需求与方案'],
+    ['规格与计划', '04 · 规格与计划'],
+    ['Agent 执行', '06 · Agent 执行'],
+    ['成果交付', '07 · 成果交付'],
+    ['历史项目', '08 · 历史项目'],
+  ];
+  for (const [label, heading] of labels) {
+    const clicked = await openStage(page, label);
+    const text = await page.evaluate('document.body.innerText');
+    check(clicked && text.includes(heading), `「${label}」页渲染出「${heading}」`);
+  }
+
+  await openStage(page, '编排与执行');
+  const backText = await page.evaluate('document.body.innerText');
+  check(backText.includes('开发任务 DAG'), '可切回「编排与执行」页');
+}
+
 async function verifySuccess(cdp) {
-  console.log('\n[成功场景]');
+  console.log('\n[成功场景：依赖 DAG]');
   const page = await openPage(cdp, BASE);
 
   const nodeCount = await page.evaluate(`document.querySelectorAll('.react-flow__node').length`);
@@ -161,13 +225,12 @@ async function verifySuccess(cdp) {
 
   const text = await page.evaluate('document.body.innerText');
   check(text.includes('开发任务 DAG'), '标题渲染');
-  check(text.includes('统一 SE Workflow 工作台'), '统一工作台渲染');
-  check(text.includes('用户想法'), '第一阶段输入入口渲染');
-  check(text.includes('模型 API 配置'), '模型 API 配置入口渲染');
-  check(text.includes('设计规格查看'), '设计规格查看入口渲染');
+  check(text.includes('任务计划视图'), '任务计划视图渲染');
   check(text.includes('甘特排期'), '甘特排期入口渲染');
   check(text.includes('workflow.json'), 'workflow.json 导出入口渲染');
   check(text.includes('task.md'), 'task.md 导出入口渲染');
+  check(text.includes('回放校验'), '回放校验入口渲染');
+  check(text.includes('断点恢复'), '断点恢复入口渲染');
   for (const label of ['已生成', '就绪', '执行中', '等依赖', '验收中', '失败', '重试中', '已阻塞', '已通过']) {
     check(text.includes(label), `九态图例含「${label}」`);
   }
@@ -175,17 +238,34 @@ async function verifySuccess(cdp) {
   check(text.includes('TASK-RUN-FX-OK'), '展示运行编号');
   check(text.includes('完成 24/24'), '展示完成计数');
 
-  // 九态在 DOM 中作为图例节点存在
   const legendCount = await page.evaluate(`document.querySelectorAll('.legend-item').length`);
   check(legendCount === 9, `图例条目为 9 个（实际 ${legendCount}）`);
 
   const badNodes = await page.evaluate(`document.querySelectorAll('.react-flow__node').length - 24`);
   check(badNodes === 0, `节点数与计划一致 = 24（偏差 ${badNodes}）`);
+}
 
-  await page.evaluate(`Array.from(document.querySelectorAll('.plan-view-switch button')).find((button) => button.textContent.includes('甘特排期'))?.click()`);
-  await sleep(500);
+async function verifyPlanViews(cdp) {
+  console.log('\n[任务计划视图：甘特 / 时间线 / 事件流]');
+  const page = await openPage(cdp, BASE);
+
+  const ganttClicked = await openPlanView(page, '甘特排期');
+  const ganttRows = await page.evaluate(`document.querySelectorAll('.gantt-row').length`);
+  check(ganttClicked && ganttRows === 24, `甘特排期任务数量 = 24（实际 ${ganttRows}）`);
+
+  const timelineClicked = await openPlanView(page, '时间线');
   const timelineRows = await page.evaluate(`document.querySelectorAll('.timeline-row').length`);
-  check(timelineRows === 24, `甘特排期任务数量 = 24（实际 ${timelineRows}）`);
+  check(timelineClicked && timelineRows === 24, `时间线任务数量 = 24（实际 ${timelineRows}）`);
+  const timelineText = await page.evaluate('document.body.innerText');
+  check(timelineText.includes('关键路径'), '时间线展示关键路径');
+
+  const activityClicked = await openPlanView(page, '事件流');
+  const activityItems = await page.evaluate(`document.querySelectorAll('.activity-item').length`);
+  check(activityClicked && activityItems > 0, `事件流渲染出事件条目（实际 ${activityItems}）`);
+
+  const dagClicked = await openPlanView(page, '依赖 DAG');
+  const dagNodes = await page.evaluate(`document.querySelectorAll('.react-flow__node').length`);
+  check(dagClicked && dagNodes === 24, `切回依赖 DAG 后节点数 = 24（实际 ${dagNodes}）`);
 }
 
 async function verifyFailure(cdp) {
@@ -230,10 +310,54 @@ async function verifyDetailPanel(cdp) {
   await sleep(800);
   const text = await page.evaluate('document.body.innerText');
   check(Boolean(clicked), `点击了节点 ${clicked || ''}`);
-  for (const section of ['依赖（上游任务）', '输入', '输出产物', '验收条件', '规定测试编号', '日志', '提交', '缺陷 / 异议']) {
+  for (const section of [
+    '人工介入',
+    '依赖（上游任务）',
+    '输入',
+    '输出产物',
+    '验收条件',
+    '规定测试编号',
+    '日志',
+    '提交',
+    '缺陷 / 异议',
+  ]) {
     check(text.includes(section), `详情面板含「${section}」`);
   }
   check(text.includes('真实接口') || text.includes('模拟数据'), '详情面板标注数据来源');
+}
+
+async function verifyWorkbench(cdp) {
+  console.log('\n[02 项目主理人：统一工作台]');
+  const page = await openPage(cdp, BASE);
+  await openStage(page, '项目主理人');
+  const text = await page.evaluate('document.body.innerText');
+
+  check(text.includes('统一 SE Workflow 工作台'), '统一工作台渲染');
+  check(text.includes('用户想法'), '第一阶段输入入口渲染');
+  check(text.includes('六人确认 R1'), '六人确认入口渲染');
+  check(text.includes('进入第二阶段'), '阶段桥接入口渲染');
+  check(text.includes('本地规则兜底') || text.includes('模型已连接'), '模型状态徽标渲染');
+  check(text.includes('由已有讨论结果创建任务运行'), '讨论结果桥接入口渲染');
+
+  const ideaInput = await page.evaluate(`Boolean(document.querySelector('textarea[aria-label="用户想法"]'))`);
+  check(ideaInput, '想法输入框可用');
+}
+
+async function verifySpecPage(cdp) {
+  console.log('\n[04 规格与计划]');
+  const page = await openPage(cdp, BASE);
+  await openStage(page, '规格与计划');
+  const text = await page.evaluate('document.body.innerText');
+
+  check(text.includes('模型 API 配置'), '模型 API 配置入口渲染');
+  const modelValue = await page.evaluate(`document.querySelector('input[aria-label="模型名称"]')?.value ?? ''`);
+  check(modelValue.includes('deepseek'), `默认模型名称已填入（实际 ${modelValue || '空'}）`);
+  check(text.includes('设计规格查看'), '设计规格查看入口渲染');
+  check(text.includes('第二阶段入口：设计规格 → PM Agent → 编排器'), '第二阶段入口渲染');
+  check(text.includes('从设计规格启动'), '从设计规格启动按钮渲染');
+
+  const specInput = await page.evaluate(`Boolean(document.querySelector('input[aria-label="设计规格路径"]'))`);
+  check(specInput, '设计规格路径输入框可用');
 }
 
 async function verifyRealError(cdp) {

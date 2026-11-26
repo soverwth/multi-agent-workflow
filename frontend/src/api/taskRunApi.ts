@@ -83,17 +83,6 @@ export interface CreateRunFromSpecConfig {
   discussionRunId?: string;
 }
 
-export interface DiscussionRun {
-  run_id: string;
-  idea: string;
-  constraints: string;
-  stage: string;
-  status: string;
-  round: number;
-  blackboard: Record<string, any>;
-  latest_consensus?: Record<string, unknown> | null;
-}
-
 export interface LlmConfigStatus {
   enabled: boolean;
   provider: string;
@@ -254,48 +243,6 @@ export async function updateLlmConfig(
   return response.llm;
 }
 
-export async function createDiscussionRun(
-  baseUrl: string,
-  idea: string,
-  constraints = '',
-): Promise<DiscussionRun> {
-  const base = baseUrl.replace(/\/+$/, '');
-  const response = await postJson<{ run: DiscussionRun }>(`${base}/api/runs`, { idea, constraints });
-  return response.run;
-}
-
-export async function fetchDiscussionRun(baseUrl: string, runId: string): Promise<DiscussionRun> {
-  const base = baseUrl.replace(/\/+$/, '');
-  const response = await fetchJson<{ run: DiscussionRun }>(`${base}/api/runs/${encodeURIComponent(runId)}`);
-  return response.run;
-}
-
-export async function advanceDiscussion(baseUrl: string, runId: string): Promise<DiscussionRun> {
-  const base = baseUrl.replace(/\/+$/, '');
-  const response = await postJson<{ run: DiscussionRun }>(
-    `${base}/api/runs/${encodeURIComponent(runId)}/until-control-point`,
-    {},
-  );
-  return response.run;
-}
-
-export async function confirmDiscussion(baseUrl: string, runId: string, members: string[]): Promise<DiscussionRun> {
-  const base = baseUrl.replace(/\/+$/, '');
-  const response = await postJson<{ run: DiscussionRun }>(
-    `${base}/api/runs/${encodeURIComponent(runId)}/confirm`,
-    { members },
-  );
-  return response.run;
-}
-
-export async function fetchDesignSpec(baseUrl: string, runId: string): Promise<Record<string, any>> {
-  const base = baseUrl.replace(/\/+$/, '');
-  const response = await fetchJson<{ design_spec: Record<string, any> }>(
-    `${base}/api/runs/${encodeURIComponent(runId)}/design-spec`,
-  );
-  return response.design_spec;
-}
-
 export async function createTaskRunFromDiscussion(
   baseUrl: string,
   discussionRunId: string,
@@ -329,17 +276,75 @@ export async function controlTaskRun(
   await postJson(`${base}/api/task-runs/${runId}/${action}`, action === 'run' ? { max_steps: maxSteps } : {});
 }
 
-/** 拉取一个任务运行的真实快照 + DAG + 事件。 */
+export interface RunEventsResult {
+  run_id: string;
+  events: RunEvent[];
+}
+
+/**
+ * 增量拉取事件：后端 `/events?after=<sequence>` 只返回序号之后的新事件。
+ * 监控循环用它替代全量事件请求，避免每次轮询都重复拉取整条事件流。
+ */
+export async function fetchRunEvents(
+  config: TaskApiConfig,
+  after: number,
+  signal?: AbortSignal,
+): Promise<RunEventsResult> {
+  const base = config.baseUrl.replace(/\/+$/, '');
+  const runId = encodeURIComponent(config.runId);
+  const query = new URLSearchParams({ limit: '1000' });
+  if (after >= 0) query.set('after', String(after));
+  return fetchJson<RunEventsResult>(`${base}/api/task-runs/${runId}/events?${query}`, signal);
+}
+
+/**
+ * 触发后端按事件流重放状态，并与当前快照比对；返回一致性结果。
+ *
+ * B02 的响应形如 `{"replay": {...}}`，这里统一解包，避免调用方误读顶层字段
+ * （曾因未解包导致回放校验永远被判为不一致）。
+ */
+export async function replayTaskRun(config: TaskApiConfig): Promise<Record<string, unknown>> {
+  const base = config.baseUrl.replace(/\/+$/, '');
+  const runId = encodeURIComponent(config.runId);
+  const response = await postJson<{ replay?: Record<string, unknown> }>(
+    `${base}/api/task-runs/${runId}/replay`,
+    {},
+  );
+  return response.replay ?? response;
+}
+
+/**
+ * 断点恢复：由后端从持久化状态重建该运行。
+ *
+ * B02 的响应形如 `{"restore": {...}}`，同样在此解包。
+ */
+export async function restoreTaskRun(config: TaskApiConfig): Promise<Record<string, unknown>> {
+  const base = config.baseUrl.replace(/\/+$/, '');
+  const runId = encodeURIComponent(config.runId);
+  const response = await fetchJson<{ restore?: Record<string, unknown> }>(
+    `${base}/api/task-runs/${runId}/restore`,
+  );
+  return response.restore ?? response;
+}
+
+/**
+ * 拉取一个任务运行的真实快照 + DAG + 事件。
+ *
+ * `afterSequence` 未提供时做全量加载；提供时只增量拉取该序号之后的事件。
+ */
 export async function fetchTaskRun(
   config: TaskApiConfig,
   signal?: AbortSignal,
+  afterSequence?: number,
 ): Promise<TaskApiResult> {
   const base = config.baseUrl.replace(/\/+$/, '');
   const runId = encodeURIComponent(config.runId);
   const [snapshotResponse, dagResponse, eventsResponse] = await Promise.all([
     fetchJson<{ run: RunSnapshot }>(`${base}/api/task-runs/${runId}`, signal),
     fetchJson<{ dag: DagPayload }>(`${base}/api/task-runs/${runId}/dag`, signal),
-    fetchJson<{ events: RunEvent[] }>(`${base}/api/task-runs/${runId}/events?limit=5000`, signal),
+    afterSequence === undefined
+      ? fetchJson<{ events: RunEvent[] }>(`${base}/api/task-runs/${runId}/events?limit=5000`, signal)
+      : fetchRunEvents(config, afterSequence, signal),
   ]);
   const run = snapshotResponse.run;
   if (!run || !Array.isArray(run.tasks)) {

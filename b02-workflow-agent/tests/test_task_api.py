@@ -143,6 +143,33 @@ class TaskApiTests(unittest.TestCase):
     def test_get_unknown_plan_is_404(self):
         self.assertEqual(self.call("GET", "/api/task-plans/PLAN-missing-v1.0")[0], 404)
 
+    def test_repeated_phase_bridge_advances_to_a_free_plan_version(self):
+        """同一项目多次桥接时，plan_version 必须推进到未被占用的版本。
+
+        回归：早期实现只调用一次 next_plan_version，第二次桥接会撞上已被占用的
+        v1.1，register_plan 抛 VersionConflict → HTTP 409，课堂演示的第二次运行必然失败。
+        """
+        versions: list[str] = []
+        for index in range(3):
+            idea = f"第 {index + 1} 次桥接演示"
+            discussion = RequestHandler.service.controller.create_run(idea)
+            RequestHandler.service.controller.run_until_control_point(discussion["run_id"])
+            RequestHandler.service.controller.confirm_requirements(discussion["run_id"], [
+                "成员 A", "成员 B", "成员 C", "成员 D", "成员 E", "成员 F",
+            ])
+            status, body = self.call(
+                "POST",
+                "/api/task-runs/from-discussion",
+                {
+                    "discussion_run_id": discussion["run_id"],
+                    "run_id": f"TASK-RUN-REPEAT-{index + 1}",
+                },
+            )
+            self.assertEqual(status, 201, body)
+            versions.append(body["plan"]["plan_version"])
+
+        self.assertEqual(len(set(versions)), 3, f"plan_version 重复: {versions}")
+
     # ---------- 运行 ----------
 
     def _start_run(self, run_id: str):

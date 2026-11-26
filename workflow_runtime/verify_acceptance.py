@@ -1,4 +1,4 @@
-"""逐条校验「最终验收」11 项（B01-B06_项目交接任务说明.md）。
+"""逐条校验「最终验收」13 项（B01-B06_项目交接任务说明.md）。
 
 每项输出 PASS/FAIL 与证据摘要，用于确认闭环确实可演示而非仅“跑通测试”。
 运行：python workflow_runtime/verify_acceptance.py

@@ -175,6 +175,20 @@ export function getDesignSpec(
   return fetchJson(`${baseOf(baseUrl)}/api/runs/${encodeURIComponent(runId)}/design-spec`, signal);
 }
 
+/** 推进讨论到下一个控制点（人工介入 / 阶段边界）。 */
+export function advanceDiscussion(baseUrl: string, runId: string): Promise<{ run: DiscussionRun }> {
+  return postJson(`${baseOf(baseUrl)}/api/runs/${encodeURIComponent(runId)}/until-control-point`, {});
+}
+
+/** 六人确认并发布 R1；成员不足时后端拒绝，前端不做本地判断。 */
+export function confirmDiscussion(
+  baseUrl: string,
+  runId: string,
+  members: string[],
+): Promise<{ run: DiscussionRun }> {
+  return postJson(`${baseOf(baseUrl)}/api/runs/${encodeURIComponent(runId)}/confirm`, { members });
+}
+
 /** 任务运行列表：展示项目阶段与完成进度的真实来源。 */
 export function listTaskRuns(baseUrl: string, signal?: AbortSignal): Promise<{ runs: TaskRunSummary[] }> {
   return fetchJson(`${baseOf(baseUrl)}/api/task-runs`, signal);

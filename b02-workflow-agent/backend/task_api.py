@@ -173,7 +173,12 @@ class TaskApi:
                 plan = existing_document or plan
                 stored = existing
             else:
-                plan["plan_version"] = next_plan_version(plan["plan_version"], spec.project_id)
+                # 只递增一档不够：同一项目第三次、第四次桥接时，v1.1 可能已被占用。
+                # 必须推进到第一个尚未登记的版本，否则 register_plan 会抛 409。
+                candidate = next_plan_version(plan["plan_version"], spec.project_id)
+                while self.store.find_plan_by_version(candidate) is not None:
+                    candidate = next_plan_version(candidate, spec.project_id)
+                plan["plan_version"] = candidate
                 stored = self.orchestrator.load_plan(plan)
         else:
             stored = self.orchestrator.load_plan(plan)

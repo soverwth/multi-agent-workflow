@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { mapSnapshotTask, statusFromEvents, type RunEvent } from './taskRunApi';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  mapSnapshotTask,
+  replayTaskRun,
+  restoreTaskRun,
+  statusFromEvents,
+  type RunEvent,
+} from './taskRunApi';
 
 function event(type: string, taskId: string | null, sequence: number): RunEvent {
   return {
@@ -61,5 +67,56 @@ describe('statusFromEvents', () => {
     ]);
     expect(states['T-1']).toBe('SUCCEEDED');
     expect(states['T-2']).toBe('RETRYING');
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function jsonResponse(body: unknown) {
+  return { ok: true, json: async () => body, status: 200, statusText: 'OK' };
+}
+
+/**
+ * 回归：B02 的 replay/restore 响应带一层包装（`{replay: {...}}` / `{restore: {...}}`）。
+ * 早期实现直接读顶层 `consistent`，导致回放校验永远显示“发现 0 处不一致”之外的失败态。
+ */
+describe('replay/restore 解包 B02 的响应包装', () => {
+  it('replayTaskRun 读取 replay 包装体里的判定结果', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      replay: {
+        run_id: 'TASK-RUN-1',
+        consistent: true,
+        mismatches: [],
+        event_count: 42,
+        last_sequence: 42,
+      },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await replayTaskRun({ baseUrl: 'http://127.0.0.1:7100', runId: 'TASK-RUN-1' });
+
+    expect(result.consistent).toBe(true);
+    expect(result.event_count).toBe(42);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:7100/api/task-runs/TASK-RUN-1/replay',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('restoreTaskRun 读取 restore 包装体', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      restore: { run_id: 'TASK-RUN-1', completed: 8, pending: [] },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await restoreTaskRun({ baseUrl: 'http://127.0.0.1:7100/', runId: 'TASK-RUN-1' });
+
+    expect(result.completed).toBe(8);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:7100/api/task-runs/TASK-RUN-1/restore',
+      expect.anything(),
+    );
   });
 });

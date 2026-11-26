@@ -34,7 +34,7 @@ STEPS = [
     ("B06 冒烟", REPO / "b06-quality-consensus", ["python", "-m", "tests.smoke"]),
     ("跨块闭环测试", REPO, ["python", "-m", "pytest", "workflow_runtime/test_closed_loop.py", "-q"]),
     ("契约一致性检查", REPO, ["python", "workflow_runtime/verify_contracts.py"]),
-    # 最终验收 11 项；--skip-ci 因为本脚本要在无 token 的 CI 环境里也能跑。
+    # 最终验收 13 项；--skip-ci 因为本脚本要在无 token 的 CI 环境里也能跑。
     # 声明“全部完成”前请单独运行不带 --skip-ci 的版本。
     ("最终验收（除 CI 外）", REPO, ["python", "workflow_runtime/verify_acceptance.py", "--skip-ci"]),
     ("闭环演示（成功）", REPO, ["python", "-m", "workflow_runtime", "pipeline", "--scenario", "success"]),
