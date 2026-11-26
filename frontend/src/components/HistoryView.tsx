@@ -65,7 +65,7 @@ export function HistoryView({ apiBase, source, onOpenDiscussion, onOpenRun }: Pr
   return (
     <div className="stage-panel">
       <div className="stage-panel-head">
-        <h2>07 · 历史项目</h2>
+        <h2>08 · 历史项目</h2>
         <p>查看平台里已经发生过的需求讨论和任务运行。记录由 B03 持久化，前端只读取和展示。</p>
       </div>
 
