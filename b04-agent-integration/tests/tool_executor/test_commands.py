@@ -90,7 +90,13 @@ def test_start_timeout_is_unknown_and_late_unit_is_cleaned(runtime_factory):
     async def scenario():
         await admit(r);result=await r.tools.execute_tool(command_request(r,timeout_seconds=.05),r.issued_controls.tool)
         assert result['status']=='unknown' and result['stop_status']=='unknown'
-        await asyncio.sleep(.2)
+        # 迟到的 unit 由后台清理，完成时机取决于 start_delay(0.18s) 与调度器负载。
+        # 固定 sleep 在繁忙的 CI 机器上余量不足（曾出现 stopped=True 但 closed 尚未置位），
+        # 因此改为有上限的轮询：既不放宽断言，也不依赖墙钟余量。
+        deadline=asyncio.get_running_loop().time()+3.0
+        while asyncio.get_running_loop().time()<deadline:
+            if backend.units and backend.units[0].stopped and backend.units[0].closed:break
+            await asyncio.sleep(.02)
         assert backend.units[0].stopped and backend.units[0].closed
         assert r.tool_store.get(operation_ref(command_request(r,timeout_seconds=.05)))['result']==result
     run(scenario())
