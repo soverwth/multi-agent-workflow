@@ -136,7 +136,15 @@ def test_external_cleanup_and_cross_instance_reconciliation(runtime_factory):
 def test_unresolved_operation_quarantines_other_ids(runtime_factory):
     backend=SimulatedSandbox(never=True,receipt={'stop_status':'unknown','evidence_refs':[]});r=configured(runtime_factory,backend)
     async def scenario():
-        await admit(r);first=await r.tools.execute_tool(command_request(r,timeout_seconds=.05),r.issued_controls.tool)
+        # 这个用例要验证的是「结果未知」如何隔离后续 operation_id，因此超时必须发生在
+        # 「等待结果」阶段而不是「启动」阶段。50ms 在繁忙的 CI runner 上可能连 unit 启动
+        # 都来不及，从而落到启动超时路径，返回 timed_out 而不是 unknown。
+        # 先等单位确实被创建，再给它一个足够宽的执行超时。
+        await admit(r);task=asyncio.ensure_future(r.tools.execute_tool(command_request(r,timeout_seconds=2),r.issued_controls.tool))
+        deadline=asyncio.get_running_loop().time()+5.0
+        while not backend.units and asyncio.get_running_loop().time()<deadline:await asyncio.sleep(.005)
+        assert backend.units,f'unit 未在 5s 内创建'
+        first=await task
         assert first['status']=='unknown'
         second=await r.tools.execute_tool(command_request(r,operation_id='different'),r.issued_controls.tool)
         assert second['status']=='unknown' and len(backend.units)==1
