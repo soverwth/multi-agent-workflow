@@ -50,7 +50,7 @@ Project checks      | integration | completed/success
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | B01 | `cd b01-spec-planner; python -m pytest -q` | **43 passed** |
-| B02 | `cd b02-workflow-agent; python -m unittest discover -s tests` | **110 tests OK** |
+| B02 | `cd b02-workflow-agent; python -m unittest discover -s tests` | **113 tests OK** |
 | B03 | `python -m pytest b03/b03_implementation -q` | **37 passed** |
 | B04 | `cd b04-agent-integration; python -m pytest -q` | **664 passed, 1 skipped**（docker） |
 | B06 | `cd b06-quality-consensus; python -m pytest -q` | **75 passed** |
@@ -117,7 +117,7 @@ workflow_runtime/bootstrap.py                     跨块装配 WorkflowStack
 workflow_runtime/pipeline.py                      四个演示场景
 workflow_runtime/cli.py                           python -m workflow_runtime 入口
 workflow_runtime/verify_contracts.py              契约一致性检查
-workflow_runtime/verify_acceptance.py             最终验收 11 项逐条核验
+workflow_runtime/verify_acceptance.py             最终验收 13 项逐条核验
 workflow_runtime/run_all_checks.py                一键全量验证
 workflow_runtime/test_closed_loop.py              跨块闭环测试
 workflow_runtime/make_frontend_fixture.py         从真实编排器生成前端 fixture
@@ -398,7 +398,7 @@ B02 与 Vite 前端不同端口，浏览器跨源请求被拒。
 $env:PYTHONIOENCODING="utf-8"
 python workflow_runtime/run_all_checks.py
 
-# 最终验收 11 项（含真实 CI 查询，需要 token）
+# 最终验收 13 项（含真实 CI 查询，需要 token）
 $env:GITHUB_TOKEN="<从 git credential fill 读取>"
 python workflow_runtime/verify_acceptance.py
 
