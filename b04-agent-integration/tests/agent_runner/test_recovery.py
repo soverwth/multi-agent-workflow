@@ -118,10 +118,20 @@ def test_unknown_stop_preserves_reconciliation_without_stopped_terminal(runtime)
 
 
 def test_execution_timeout_stops_new_calls_and_retains_remote_uncertainty(runtime_factory):
+    # execution_timeout=0.15 是墙钟超时。若在慢速 CI runner 上，模型调用还没真正进入
+    # handler 就先超时，走的是另一条清理路径，stop_status 会是 confirmed 而不是 unknown
+    # （CI run 45838694925 的实际失败）。因此先让 handler 确认已进入，再等超时生效。
     runtime=runtime_factory(execution_timeout=0.15,model_timeout=2)
-    async def model(_):await asyncio.sleep(10)
+    entered=asyncio.Event()
+    async def model(_):entered.set();await asyncio.sleep(10)
     runtime.driver.handler=model;runtime.driver.confirm_cancel=False
-    _,snapshot=run(execute(runtime))
+    async def scenario():
+        receipt=await runtime.runner.invoke_agent(runtime.envelope)
+        assert receipt["accepted"],receipt
+        await asyncio.wait_for(entered.wait(),timeout=5)
+        snapshot=await runtime.runner.wait_invocation(invocation_ref(runtime.envelope))
+        return snapshot
+    snapshot=run(scenario())
     assert error(runtime,snapshot)["code"]=="EXEC_TIMEOUT" and error(runtime,snapshot)["stop_status"]=="unknown" and runtime.driver.send_count==1
 
 
