@@ -24,6 +24,44 @@ def _slug(value: str) -> str:
     return f"{slug}-{digest}" if slug else f"project-{digest}"
 
 
+# B01 只接受 must|should|may。阶段一的优先级有两套来源：
+# - 本地兜底规则产出 Must/Should（大小写不同）；
+# - 真实模型产出的可能是 P0/P1/P2 或 高/中/低。
+# 桥接层必须把它们归一化，否则真实模型一旦返回 P0 就必然被 B01 拒绝（HTTP 400）。
+_PRIORITY_ALIASES = {
+    "must": "must",
+    "should": "should",
+    "may": "may",
+    "p0": "must",
+    "p1": "should",
+    "p2": "may",
+    "高": "must",
+    "中": "should",
+    "低": "may",
+    "high": "must",
+    "medium": "should",
+    "low": "may",
+}
+
+
+def normalize_priority(value: Any) -> str:
+    """把阶段一的各种优先级写法归一化为 B01 契约取值 must|should|may。"""
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return "must"
+    if raw in _PRIORITY_ALIASES:
+        return _PRIORITY_ALIASES[raw]
+    # 形如 "P01"、"p-0" 的写法按首字母数字归一。
+    match = re.fullmatch(r"p[-\s]?([0-9])", raw)
+    if match:
+        return _PRIORITY_ALIASES.get(f"p{match.group(1)}", "must")
+    # 含 must/should/may 的自然语言（例如 "must-have"）。
+    for key in ("must", "should", "may"):
+        if key in raw:
+            return key
+    return "must"
+
+
 def r1_to_design_spec(run: dict[str, Any]) -> dict[str, Any]:
     """把已确认的讨论运行转换成 B01 可消费的设计规格。
 
@@ -59,7 +97,7 @@ def r1_to_design_spec(run: dict[str, Any]) -> dict[str, Any]:
             "req_id": req_id,
             "title": title,
             "description": title,
-            "priority": str(item.get("priority") or "must").lower(),
+            "priority": normalize_priority(item.get("priority")),
             "acceptance": list(acceptance),
             "constraints": constraints,
         })

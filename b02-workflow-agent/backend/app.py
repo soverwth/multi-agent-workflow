@@ -22,8 +22,17 @@ from .workflow_definition import PSEUDOCODE, STAGES, TRANSITIONS
 
 
 class ApplicationService:
-    def __init__(self, root: Path, task_root: Path | None = None):
+    def __init__(
+        self,
+        root: Path,
+        task_root: Path | None = None,
+        frontend_root: Path | None = None,
+    ):
         self.root = root
+        # B02 is the single HTTP origin for the integrated demo.  The built
+        # B05 bundle lives beside this package in ``frontend/dist`` and is
+        # served by the same process, so the browser needs only port 7100.
+        self.frontend_root = (frontend_root or root.parent / "frontend" / "dist").resolve()
         self.events = WorkflowEventHub()
         self.llm_client = OpenAICompatibleClient()
         self.controller = DiscussionController(
@@ -38,8 +47,8 @@ class ApplicationService:
 class RequestHandler(BaseHTTPRequestHandler):
     service: ApplicationService
 
-    # B05 前端运行在不同端口（Vite 5173 / preview 4321），浏览器会做跨源请求。
-    # 这里允许任意本机源；服务只监听 127.0.0.1，且不携带 Cookie 凭据。
+    # 保留本机跨源访问，方便可选的 Vite 热更新模式；正式运行时 B05
+    # 与 B02 同源，不需要跨源请求。
     CORS_ALLOWED_ORIGIN_PATTERN = re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$")
 
     def _cors_origin(self) -> str | None:
@@ -271,10 +280,36 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def _static(self, path: str) -> None:
         relative = "index.html" if path in ("", "/") else path.lstrip("/")
-        if relative not in ("index.html", "styles.css", "app.js", "favicon.svg"):
+        file_path: Path | None = None
+
+        # Prefer the production B05 bundle.  Resolve and constrain the path
+        # before reading it so an URL cannot escape the build directory.
+        frontend_root = self.service.frontend_root
+        candidate = (frontend_root / relative).resolve()
+        try:
+            candidate.relative_to(frontend_root)
+        except ValueError:
+            candidate = frontend_root / "__invalid__"
+        if candidate.is_file():
+            file_path = candidate
+        elif frontend_root.is_dir() and Path(relative).suffix == "":
+            # SPA fallback for client-side routes.
+            index = frontend_root / "index.html"
+            if index.is_file():
+                file_path = index
+
+        # Keep the original B02 demo page available when the frontend has not
+        # been built yet (for example, while running the backend unit tests).
+        if file_path is None:
+            legacy_relative = relative if relative in ("index.html", "styles.css", "app.js", "favicon.svg") else None
+            if legacy_relative is not None:
+                legacy = self.service.root / "static" / legacy_relative
+                if legacy.is_file():
+                    file_path = legacy
+        if file_path is None:
             self._json({"error": "Resource not found"}, 404)
             return
-        file_path = self.service.root / "static" / relative
+
         body = file_path.read_bytes()
         self.send_response(200)
         content_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
@@ -295,10 +330,16 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7100)
     parser.add_argument("--task-db", default=None, help="任务编排状态库路径，默认 <root>/data/task-state.db")
+    parser.add_argument(
+        "--frontend-dir",
+        default=None,
+        help="B05 构建产物目录，默认 <repo>/frontend/dist",
+    )
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     task_db = Path(args.task_db) if args.task_db else root / "data" / "task-state.db"
-    RequestHandler.service = ApplicationService(root, task_db)
+    frontend_dir = Path(args.frontend_dir) if args.frontend_dir else None
+    RequestHandler.service = ApplicationService(root, task_db, frontend_dir)
     server = ThreadingHTTPServer((args.host, args.port), RequestHandler)
     server.daemon_threads = True
     print(f"B02 WorkflowAgent: http://{args.host}:{args.port}/")
