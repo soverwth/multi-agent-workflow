@@ -225,10 +225,20 @@ python -m workflow_runtime pipeline --spec b01-spec-planner/docs/fixtures/lab-eq
 
 ## 文档
 
+### 课程作业与分工
+
+- [课堂作业要求与项目现状对照](docs/HOMEWORK_SCOPE.md) — 三次作业要求、已确认约束、能力覆盖度
+- [团队分工方案](docs/TEAM_DIVISION.md) — 2/2/2 分组、各组工作项与估时、协作接口
+- [待澄清问题清单](docs/OPEN_QUESTIONS.md) — 需问老师的问题、需内部决定的事、技术遗留
+- [参考项目调研：SE-lib](docs/REFERENCE_PROJECTS.md) — 其他组项目的代码级核实结论
+
+### 工程文档
+
 - [项目总览](docs/PROJECT_OVERVIEW.md)
 - [任务编排闭环契约](docs/TASK_ORCHESTRATION.md)
 - [第二阶段实施记录](docs/STAGE2_STATUS.md)
 - [GitHub 协作与分支流程](docs/BRANCHING.md)
 - [集成运行说明](docs/INTEGRATION.md)
+- [大模型 API 接入说明](docs/LLM_INTEGRATION.md)
 
 各工作块的实现和使用方式写在对应目录的 README 中。
