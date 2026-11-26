@@ -225,12 +225,14 @@ python -m workflow_runtime pipeline --spec b01-spec-planner/docs/fixtures/lab-eq
 
 ## 文档
 
-### 课程作业与分工
+### 课程项目
 
-- [课堂作业要求与项目现状对照](docs/HOMEWORK_SCOPE.md) — 三次作业要求、已确认约束、能力覆盖度
-- [团队分工方案](docs/TEAM_DIVISION.md) — 2/2/2 分组、各组工作项与估时、协作接口
+- [项目需求规格](docs/PROJECT_REQUIREMENTS.md) — 三阶段要做什么、功能与非功能需求
+- [项目流程设计](docs/PROJECT_WORKFLOW.md) — 三阶段流程怎么走、与现有实现的差距
+- [团队分工方案](docs/TEAM_DIVISION.md) — 2/2/2 分组、各组职责与估时、两段式推进
 - [待澄清问题清单](docs/OPEN_QUESTIONS.md) — 需问老师的问题、需内部决定的事、技术遗留
-- [参考项目调研：SE-lib](docs/REFERENCE_PROJECTS.md) — 其他组项目的代码级核实结论
+- [作业要求与现状对照](docs/HOMEWORK_SCOPE.md) — 原始作业要求与本仓库实现状态
+- [参考项目调研：SE-lib](docs/REFERENCE_PROJECTS.md) — 参照其工程规范的具体清单
 
 ### 工程文档
 
