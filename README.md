@@ -233,7 +233,8 @@ python -m workflow_runtime pipeline --spec b01-spec-planner/docs/fixtures/lab-eq
 
 - [项目需求规格](docs/PROJECT_REQUIREMENTS.md) — 三阶段要做什么、功能与非功能需求
 - [项目流程设计](docs/PROJECT_WORKFLOW.md) — 三阶段流程怎么走、与现有实现的差距
-- [团队分工方案](docs/TEAM_DIVISION.md) — 2/2/2 分组、各组职责与估时、两段式推进
+- [团队分工方案](docs/TEAM_DIVISION.md) — 总纲：进度盘点、分支治理、任务卡总表、跨人依赖
+- [个人分工文档](docs/team/) — A 讨论状态机 / B 设计规格 / C 计划契约 / D 真实执行 / E 观测验收 / F 圆桌框架，每人只读自己那份
 - [待澄清问题清单](docs/OPEN_QUESTIONS.md) — 需问老师的问题、需内部决定的事、技术遗留
 - [作业要求与现状对照](docs/HOMEWORK_SCOPE.md) — 原始作业要求与本仓库实现状态
 - [参考项目调研：SE-lib](docs/REFERENCE_PROJECTS.md) — 参照其工程规范的具体清单
