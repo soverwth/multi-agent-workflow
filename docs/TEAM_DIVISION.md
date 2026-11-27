@@ -73,7 +73,8 @@
 | G3 | 对话记忆表 `conversation_messages` 未实现（全仓库 0 命中） | B03 SQLite | 组 1 / A-3 |
 | G4 | H 阶段设计规格未细化：契约引用全空 | `phase_bridge.py:108`（`contract_refs: []`） | 组 1 / B-1 |
 | G5 | 基线对象缺 `revision / parent_baseline_id / sha256`（前端占位已在等） | `phase_bridge.py` | 组 1 / B-2 |
-| G6 | 计划编辑不可回写、无 CAS、`input_snapshot` 不强制 | `task_api.py`、STAGE2_STATUS 遗留 5 | 组 2 / C-1, C-2 |
+| G6 | 计划编辑不可回写、无 CAS、`input_snapshot` 不强制；**前端图是只读看板**：`TaskGraph.tsx:22-25` 的 `useEffect` 每次重渲染重置布局、未传 `onConnect`、无增删入口（实测拖动位移 0、重渲染位置回原点） | `task_api.py`、`TaskGraph.tsx`、STAGE2_STATUS 遗留 5 | 组 2 / C-1a, C-1b, C-2 |
+| G15 | **「任务分解」只是查表**：`dynamic_planner.build_tasks_from_spec` 把每个设计条目/契约操作/需求各映射成一个任务，没有分解逻辑、没有模型参与、不可增量——而需求 2-2 要求「不断分解任务」（P0） | `b01/src/b01/dynamic_planner.py` | 组 2 / C-7, C-5 |
 | G7 | 执行仍是 mock（`simulated=True`），无网页产物 | `b04/gateway.py` | 组 2 / D-1, D-2 |
 | G8 | 契约靠手写文档，无机器可读 Schema | `TASK_ORCHESTRATION.md` | 组 2 / C-3 |
 | G9 | 任务图只有 task+dep，无 decision/checkpoint/join 语义 | `dynamic_planner.py`、`task_orchestrator.py` | 组 2 / C-4 |
@@ -135,7 +136,7 @@
 |---|---|---|---|
 | **A** | 1 | `feat/p1-agent-consensus`（状态机与共识）<br>`feat/p1-conversation-memory`（对话记忆与圆桌后端） | `controller.py`、`adapters.py`、`workflow_definition.py`、B03 |
 | **B** | 1 | `feat/p1-design-spec`（设计规格细化与基线）<br>`feat/p1-frontend-discussion`（阶段一前端与埋点） | `phase_bridge.py`、`frontend/src`、B04 llm 调用点 |
-| **C** | 2 | `feat/p2-plan-editing`（编辑回写 / CAS / 增量分解）<br>`feat/p2-contract-schema`（契约 JSON Schema 与图语义） | `task_api.py`、`dynamic_planner.py`、`verify_contracts.py` |
+| **C** | 2 | `feat/p2-plan-editing`（前端可编辑 / 后端回写 / CAS / **任务分解模块** / 增量重算）<br>`feat/p2-contract-schema`（契约 JSON Schema 与图语义） | `TaskGraph.tsx`、`task_api.py`、`dynamic_planner.py`、`decomposer.py`（新）、`verify_contracts.py` |
 | **D** | 2 | `feat/p2-real-execution`（真实 runner / 网页产物 / 分档路由）<br>`feat/p2-cases`（案例重建） | `b04/gateway.py`、`b02` 预览路由、`fixtures/` |
 | **E** | 3 | `feat/p3-observation`（观测 schema / 埋点 / 观测页）<br>`feat/p3-acceptance`（三类验收证据） | B02 llm 层、`task_state.py`、`ObservationView.tsx` |
 | **F** | 3 | `feat/p3-roundtable`（圆桌交互前端）<br>`feat/p3-unified-ui`（统一框架 / 可达性 / 性能） | `frontend/src/components/`、`App.css` |
@@ -155,12 +156,12 @@
 |---|---|---|---|---|
 | A | 1 | [A-讨论状态机与共识](team/A-讨论状态机与共识.md) | `feat/p1-agent-consensus`、`feat/p1-conversation-memory` | 拆三处人工门、六人确认→agent 共识、对话记忆表、圆桌后端 |
 | B | 1 | [B-设计规格与基线](team/B-设计规格与基线.md) | `feat/p1-design-spec`、`feat/p1-frontend-discussion` | 契约六块补全、基线对象（hash/父链）、阶段一前端、模型调用埋点、C2 案例 |
-| C | 2 | [C-计划编辑与契约](team/C-计划编辑与契约.md) | `feat/p2-plan-editing`、`feat/p2-contract-schema` | 契约 JSON Schema、计划编辑回写、CAS、图节点语义、增量分解 |
+| C | 2 | [C-计划编辑与契约](team/C-计划编辑与契约.md) | `feat/p2-plan-editing`、`feat/p2-contract-schema` | 契约 JSON Schema、**前端可编辑（第 1 周可演示）**、后端回写、CAS、**任务分解模块**、图节点语义、增量重算 |
 | D | 2 | [D-真实执行与案例](team/D-真实执行与案例.md) | `feat/p2-real-execution`、`feat/p2-cases` | 真实 runner（不伪提交）、网页产物与预览、写入范围、分档路由、L1→C3 案例 |
 | E | 3 | [E-观测与验收](team/E-观测与验收.md) | `feat/p3-observation`、`feat/p3-acceptance` | 观测 Schema（硬门禁）、埋点、观测页真实化、三类验收报告、签名证据链 |
 | F | 3 | [F-圆桌与统一框架](team/F-圆桌与统一框架.md) | `feat/p3-roundtable`、`feat/p3-unified-ui` | 圆桌前端、CAS 冲突 UI、预览按钮、样式规范、性能可达性基准 |
 
-### 4.2 任务卡总表（33 张）
+### 4.2 任务卡总表（38 张）
 
 | 卡 | 内容 | 估时 | 周 | 对应缺口 |
 |---|---|---|---|---|
@@ -176,10 +177,12 @@
 | B-4 | 模型调用埋点（按 E-1 Schema） | 8h | 3 | G11 |
 | B-5 | 第一个 C2 案例（真实流程生成） | 6h | 3 | G10 |
 | C-3 | 契约 JSON Schema + 一致性校验（赶 0-3 冻结会） | 10h | 1 | G8 |
-| C-1 | 节点编辑回写 + 布局持久化 | 16h | 2 | G6 |
+| C-1a | **前端可编辑**：拖动持久化 + 连线 + 增删（只改前端，第 1 周末可演示） | 10h | 1 | G6 |
+| C-1b | 后端回写：PATCH 校验后生成新计划版本 | 8h | 2 | G6 |
 | C-2 | 计划 CAS + input_hash 强校验 | 6h | 2 | G6 |
 | C-4 | 图节点语义 decision/checkpoint/join + pass/fail/loop | 12h | 3 | G9 |
-| C-5 | 增量分解 | 8h | 4 | — |
+| C-7 | **设计规格任务分解模块**：base（=现有函数，回归底线）/ enhanced（三条拆分规则，确定性）/ hybrid（模型只补充、校验失败回落）| 12h | 3 | G15 |
+| C-5 | 增量重算（依赖 C-7） | 6h | 4 | G15 |
 | C-6 | 分支治理：评审 `b01-spec-planner`、`feature/b03-blackboard` | 2h | 1 | G14 |
 | D-1 | B04 真实 runner（失败不伪提交） | 14h | 1 | G7 |
 | D-2 | 网页产物 + `/preview/<run_id>/` | 8h | 2 | G7 |
@@ -209,7 +212,7 @@
                      └─→ E-3 观测页（第 3 周）
          A-1 → A-2 ──┬─→ B-1 契约（confirmed_by 格式）
                      └─→ A-4 模式
-         C-3 Schema ──→ C-1 编辑接口的请求体定义
+         C-3 Schema ──→ C-1b PATCH 请求体定义；C-1a 前端可编辑不依赖任何人（第 1 周末可演示）
          D-1 runner ──┬─→ D-2 预览 ──→ F-5 按钮
                       ├─→ E-5 证据链
                       └─→ D-5 C3 案例 ←── B-5 C2 规格
@@ -218,6 +221,8 @@
          B-2 哈希函数 ──→ C-2 input_hash
          C-2 409 形状 ──→ F-2 弹窗
 第 3 周  E-2 路由 ──→ E-3；F-4 基准 ──→ E-4 报告
+         B-1 契约 operations + B-2 baseline.revision ──→ C-7 分解模块（base 模式不等；enhanced/hybrid 读契约与基线）
+第 4 周  C-7 分解器 + C-1b 回写 ──→ C-5 增量重算
 第 4 周  所有前端 PR 合入 ──→ F-3 清理硬编码
 ```
 
@@ -229,7 +234,8 @@
 | `b02-workflow-agent/backend/controller.py` | A（本体）、E（只通过 `on_event` 钩子，不改本体） | E 不碰 |
 | `b03/b03_implementation/task_state.py` | 本体不改；A 加 `conversation.py`、B 加 `baseline_history.py`、E 加 `observation.py` | 全部新文件并列 |
 | `frontend/src/components/RoundTableView.tsx` | B（数据接入）、F（交互按钮） | 先划行再动手 |
-| `frontend/src/components/TaskGraph.tsx` | C（布局/连线）、F（仅弹窗调用一行） | F 的改动让 C review |
+| `frontend/src/components/TaskGraph.tsx` | **C-1a 全权**（布局/连线/增删）、F-2（仅弹窗调用一行） | 第 1 周 C-1a 先合；F 不在 F-1/F-2 里碰此文件；F 的改动让 C review |
+| `b01-spec-planner/src/b01/dynamic_planner.py` | C-7（改为调用 `decomposer.py`，签名不变）、B-1（若需读 `contract.operations`） | C-7 保证 base 模式对现有 fixture 逐字节不变（mode 缺省 base）；B 只读不改 |
 | `frontend/src/components/TaskNode.tsx` | C（节点类型渲染）、F（F-3 清内联色） | 约时间窗 |
 | `frontend/src/App.tsx` | 所有人 | 只改自己的页面段；顶栏与路由定义冻结 |
 
@@ -286,22 +292,22 @@
 |---|---|---|---|
 | A | 1 | A-1 12 + A-2 6 + A-3 16 + A-4 8 + A-5 10 + A-6 2 | **54h** |
 | B | 1 | B-1 18 + B-2 8 + B-3 14 + B-4 8 + B-5 6 | **54h** |
-| C | 2 | C-1 16 + C-2 6 + C-3 10 + C-4 12 + C-5 8 + C-6 2 | **54h** |
+| C | 2 | C-3 10 + C-1a 10 + C-1b 8 + C-2 6 + C-4 12 + **C-7 12** + C-5 6 + C-6 2 | **66h** |
 | D | 2 | D-1 14 + D-2 8 + D-3 6 + D-4 6 + D-5 10 + D-6 2 | **46h** |
 | E | 3 | E-1 10 + E-2 14 + E-3 14 + E-4 6 + E-5 8 + E-6 1 + E-7 2 | **55h** |
 | F | 3 | F-1 14 + F-2 6 + F-3 10 + F-4 10 + F-5 2 + F-6 2 | **44h** |
 | 全体 | — | 0-1（2h/人）+ 0-3（2h/人）+ 0-4（1h/周×轮值） | 约 +5h/人 |
 
-**每人 49~59h**，基本均衡；对比 v1 的组 2 偏重问题（老师指出），本轮已把编排侧拆给 C/D 两线、观测埋点拆给 B/E 协作。按每人每周 12~15h，约 4 周完成。
+**每人 44~66h**。C 比其他人多约 12h，原因是新增的 C-7 分解模块（G15）必须落在计划数据模型这条链上——拆给别人会让两个人同时改 `plan` 文档结构。**均衡办法**（二选一，第 1 周内定）：① 把 C-6（旧分支评审 2h）转给 A；② 把 C-4 图语义的**前端渲染部分**（`TaskNode.tsx` / `dagreLayout.ts` 约 4h）转给 F——F 本来就在第 4 周清 `TaskNode.tsx` 的内联色，顺手做节点类型渲染最省。推荐 ②，调整后 C 62h / F 48h。按每人每周 12~15h，约 4 周完成。
 
 ### 排期（吸收"先跑通再迭代"，三周为界）
 
 | 周 | 目标 | 关键卡 |
 |---|---|---|
-| 第 1 周 | **链路通**：无审批门的讨论 → R1 → 基线 → 真实 runner 出文件 | A-1、A-2、D-1（最小版）、E-1 schema 冻结、0-2 治理 |
-| 第 2 周 | **可编辑 + 可观测**：计划 CAS 与编辑、对话记忆、埋点落地、网页预览 | A-3、C-1、C-2、B-2、D-2、E-2 |
-| 第 3 周 | **深化与证据**：图语义、圆桌真实化、观测页真实数据、C3 案例、三类报告 | C-4、F-1、E-3、D-5、B-1 收尾、E-4 |
-| 第 4 周 | 收尾与答辩准备：F-3/F-4、简化模式、增量分解、回归与文档 | A-4、C-5、其余收尾卡 |
+| 第 1 周 | **链路通**：无审批门的讨论 → R1 → 基线 → 真实 runner 出文件；**阶段 2 的图第一次可编辑** | A-1、A-2、D-1（最小版）、E-1 schema 冻结、**C-1a**、C-3、0-2 治理 |
+| 第 2 周 | **编辑落地 + 可观测**：PATCH 回写与 CAS、对话记忆、埋点落地、网页预览 | A-3、C-1b、C-2、B-2、D-2、E-2 |
+| 第 3 周 | **深化与证据**：任务分解模块、图语义、圆桌真实化、观测页真实数据、C3 案例、三类报告 | **C-7**、C-4、F-1、E-3、D-5、B-1 收尾、E-4 |
+| 第 4 周 | 收尾与答辩准备：F-3/F-4、简化模式、增量重算、回归与文档 | A-4、C-5、其余收尾卡 |
 
 ---
 
@@ -320,4 +326,5 @@
 | 日期 | 变更 |
 |---|---|
 | 2026-11-27 | v2 重写：按 main `01f88cd` 实况核对完成/未完成清单；分支模型从"一人一块一分支"改为"一人多分支 + 阶段功能分支"；加入三组调研吸收项（CAS、基线哈希、模型调用工件、真实执行闭环、图语义、性能基准）；加入旧分支治理任务与开工仪式。v1（老师对话记录）见 git 历史。 |
+| 2026-11-27 | v2.2：按「阶段 2 需有用户可修改节点 + 任务分解模块」的要求：① C-1 拆为 C-1a（前端可编辑，第 1 周末可演示，不依赖后端）+ C-1b（PATCH 回写）；② 新增 **C-7 设计规格任务分解模块**（rule 确定性骨架 + hybrid 模型补充，12h），C-5 改为依赖 C-7 的增量重算（8→6h）；③ 缺口表加 G15（现有分解只是查表，`build_tasks_from_spec` 无分解逻辑）；④ C 工时 54→66h，给出两种均衡方案。此前 |
 | 2026-11-27 | v2.1 细化：拆出 6 份个人文档 `docs/team/A—F`。每份含：本人分支表与联调对象、代码地图（文件→现状行号→要动的部分）、任务卡（步骤到行号级、测试用例名、红线、验收数字）、每周节奏、验收命令速查。总纲第四节改为索引 + 33 张卡总表 + 跨人依赖图 + **同文件对撞点表**（`app.py` 路由段四人同改等 7 处）。补齐 v2 遗漏：C-3 应先于 C-1（冻结会需要）、0-3 由 E 主持、各块测试基线数字（B01 44 / B02 113 / B03 46 / B04 664+1 / B06 75 / 前端 20）。 |
