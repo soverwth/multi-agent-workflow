@@ -29,10 +29,11 @@ export const discussionStageNarrative: Record<string, string> = {
   DIVERGE: '各角色正在独立提出观点，彼此看不到对方',
   CLUSTER: '正在把相近的观点归为一类',
   CRITIQUE: '角色之间正在互相质疑、验证观点',
-  EVALUATE: '正在评估分歧是否需要你来裁决',
-  PROPOSAL_REVIEW: '正在审阅方案，收集角色确认',
-  HUMAN_CONFIRMATION: '等待六位成员分别确认需求',
-  COMPLETED: '需求已确认，可以进入开发阶段',
+  EVALUATE: '正在评估分歧，有分歧则 agent 自动辩论',
+  PROPOSAL_REVIEW: '正在审阅方案，收集 agent 角色签核',
+  HUMAN_CONFIRMATION: 'agent 角色正在互相确认需求（无人工审批）',
+  DESIGN_SPEC: '正在细化接口、错误码、字段边界与数据模型',
+  COMPLETED: '需求已由 agent 共识确认，可以进入开发阶段',
   STOPPED: '达到控制预算，流程已诚实停止（不代表达成共识）',
 };
 
@@ -44,7 +45,7 @@ export function narrativeForDiscussionStage(stage: string): string {
 export const discussionStatusNarrative: Record<string, string> = {
   READY: '可以推进到下一步',
   RUNNING: '正在推进中',
-  WAITING_HUMAN: '正在等待你的处理',
+  WAITING_HUMAN: '停在 agent 共识确认点（无人工审批，可继续推进）',
   PAUSED: '已暂停，恢复前不会派发新任务',
   STOPPED: '已停止，没有生成需求结论',
   BLOCKED: '执行失败，流程被阻断',

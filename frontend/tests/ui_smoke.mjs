@@ -7,7 +7,7 @@
  *  3. 切换到「失败」模拟运行后出现 BLOCKED 节点与阻塞原因。
  *  4. 点击节点后详情面板展示输入/输出/依赖/验收/测试/日志/提交/缺陷 + 人工介入。
  *  5. 八页面导航可切换，每页标题与关键区块渲染。
- *  6. 02 项目主理人页含统一工作台（想法输入、六人确认、模型 API 状态）。
+ *  6. 02 项目主理人页含想法输入、agent 共识确认、模型 API 状态；03 需求讨论 / 09 观测与回溯占位页渲染。
  *  7. 04 规格与计划页含模型 API 配置、设计规格查看、从设计规格启动。
  *  8. 切换到「真实接口」且后端不可达时显示错误，且不展示模拟数据。
  *
@@ -190,20 +190,22 @@ async function main() {
 }
 
 async function verifyStages(cdp) {
-  console.log('\n[八页面导航]');
+  console.log('\n[侧边栏导航]');
   const page = await openPage(cdp, BASE);
 
   const stageCount = await page.evaluate(`document.querySelectorAll('.stage-item').length`);
-  check(stageCount === 8, `导航含 8 个页面（实际 ${stageCount}）`);
+  check(stageCount === 10, `导航含 10 个页面（实际 ${stageCount}）`);
 
   const labels = [
-    ['项目总览', '01 · 项目总览'],
-    ['项目主理人', '02 · 项目主理人'],
-    ['需求与方案', '03 · 需求与方案'],
-    ['规格与计划', '04 · 规格与计划'],
-    ['Agent 执行', '06 · Agent 执行'],
-    ['成果交付', '07 · 成果交付'],
-    ['历史项目', '08 · 历史项目'],
+    ['项目总览', '项目总览'],
+    ['项目主理人', '项目主理人'],
+    ['需求讨论', '需求讨论 · 八阶段看板'],
+    ['需求与方案', '需求与方案'],
+    ['规格与计划', '规格与计划'],
+    ['Agent 执行', 'Agent'],
+    ['成果交付', '成果交付'],
+    ['观测与回溯', '观测与回溯'],
+    ['历史项目', '历史项目'],
   ];
   for (const [label, heading] of labels) {
     const clicked = await openStage(page, label);
@@ -211,9 +213,15 @@ async function verifyStages(cdp) {
     check(clicked && text.includes(heading), `「${label}」页渲染出「${heading}」`);
   }
 
+  // 侧栏按阶段分组
+  const groups = await page.evaluate(`document.querySelectorAll('.sidebar-section').length`);
+  check(groups === 4, `侧栏分 4 组（项目 / 阶段一 / 阶段二 / 阶段三）（实际 ${groups}）`);
+
   await openStage(page, '编排与执行');
   const backText = await page.evaluate('document.body.innerText');
-  check(backText.includes('开发任务 DAG'), '可切回「编排与执行」页');
+  check(backText.includes('任务计划视图'), '可切回「编排与执行」页');
+  const noSix = await page.evaluate(`document.body.innerText.includes('六人确认')`);
+  check(!noSix, '界面不再出现「六人确认」');
 }
 
 async function verifySuccess(cdp) {
@@ -224,7 +232,7 @@ async function verifySuccess(cdp) {
   check(nodeCount >= 20, `DAG 节点数量 >= 20（实际 ${nodeCount}）`);
 
   const text = await page.evaluate('document.body.innerText');
-  check(text.includes('开发任务 DAG'), '标题渲染');
+  check(text.includes('多智能体协作开发平台') && text.includes('编排与执行'), '顶栏品牌与当前页渲染');
   check(text.includes('任务计划视图'), '任务计划视图渲染');
   check(text.includes('甘特排期'), '甘特排期入口渲染');
   check(text.includes('workflow.json'), 'workflow.json 导出入口渲染');
@@ -327,28 +335,50 @@ async function verifyDetailPanel(cdp) {
 }
 
 async function verifyWorkbench(cdp) {
-  console.log('\n[02 项目主理人：统一工作台]');
+  console.log('\n[02 项目主理人]');
   const page = await openPage(cdp, BASE);
   await openStage(page, '项目主理人');
   const text = await page.evaluate('document.body.innerText');
 
-  check(text.includes('统一 SE Workflow 工作台'), '统一工作台渲染');
+  check(text.includes('提交想法'), '想法提交卡片渲染');
   check(text.includes('用户想法'), '第一阶段输入入口渲染');
-  check(text.includes('六人确认 R1'), '六人确认入口渲染');
+  check(text.includes('agent 共识确认'), 'agent 共识确认入口渲染（替代六人确认）');
+  check(!text.includes('六人确认'), '不再出现六人确认');
   check(text.includes('进入第二阶段'), '阶段桥接入口渲染');
   check(text.includes('本地规则兜底') || text.includes('模型已连接'), '模型状态徽标渲染');
   check(text.includes('由已有讨论结果创建任务运行'), '讨论结果桥接入口渲染');
 
   const ideaInput = await page.evaluate(`Boolean(document.querySelector('textarea[aria-label="用户想法"]'))`);
   check(ideaInput, '想法输入框可用');
+
+  // 圆桌页占位
+  await openStage(page, '需求讨论');
+  const round = await page.evaluate('document.body.innerText');
+  check(round.includes('圆桌 · 多 agent 与用户同场'), '圆桌交互占位渲染');
+  const phaseSteps = await page.evaluate(`document.querySelectorAll('.phase-rail-step').length`);
+  check(phaseSteps === 8, `八阶段进度条渲染（实际 ${phaseSteps}）`);
+  const seats = await page.evaluate(`document.querySelectorAll('.seat').length`);
+  check(seats === 4, `圆桌四席位渲染（实际 ${seats}）`);
+  const chatBox = await page.evaluate(`Boolean(document.querySelector('textarea[aria-label="圆桌插话"]'))`);
+  check(chatBox, '圆桌插话输入框可用');
+
+  // 观测页占位
+  await openStage(page, '观测与回溯');
+  const obs = await page.evaluate('document.body.innerText');
+  check(obs.includes('跨阶段时间轴'), '跨阶段时间轴占位渲染');
+  check(obs.includes('模型调用工件'), '模型调用工件表占位渲染');
+  check(obs.includes('事后回溯'), '事后回溯占位渲染');
 }
 
 async function verifySpecPage(cdp) {
-  console.log('\n[04 规格与计划]');
+  console.log('\n[05 规格与计划]');
   const page = await openPage(cdp, BASE);
   await openStage(page, '规格与计划');
   const text = await page.evaluate('document.body.innerText');
 
+  check(text.includes('设计规格基线'), '基线卡渲染');
+  check(text.includes('baseline_id'), '基线字段渲染');
+  check(text.includes('sha256'), '基线哈希字段渲染');
   check(text.includes('模型 API 配置'), '模型 API 配置入口渲染');
   const modelValue = await page.evaluate(`document.querySelector('input[aria-label="模型名称"]')?.value ?? ''`);
   check(modelValue.includes('deepseek'), `默认模型名称已填入（实际 ${modelValue || '空'}）`);

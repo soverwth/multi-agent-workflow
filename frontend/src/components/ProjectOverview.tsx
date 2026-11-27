@@ -46,8 +46,8 @@ interface Props {
 }
 
 const SCENARIOS = [
-  { value: 'normal', label: '正常收敛（六人确认）' },
-  { value: 'value_conflict', label: '价值分歧（人工裁决）' },
+  { value: 'normal', label: '正常收敛（agent 共识）' },
+  { value: 'value_conflict', label: '价值分歧（自动辩论后判定）' },
   { value: 'budget_exhaustion', label: '预算耗尽（诚实停止）' },
   { value: 'agent_failure', label: 'Agent 失败（阻断）' },
 ];
@@ -129,12 +129,14 @@ export function ProjectOverview({
 
   return (
     <div className="stage-panel">
-      <div className="stage-panel-head">
-        <h2>01 · 项目总览</h2>
-        <p>
-          这里汇总平台里的项目：需求讨论、任务运行、当前阶段和完成进度。
-          所有数据来自后端接口或本地真实编排器产物，页面不会自行生成项目。
-        </p>
+      <div className="page-head">
+        <div className="page-head-text">
+          <h2>项目总览</h2>
+          <p>
+            汇总平台里的项目：需求讨论、任务运行、当前阶段和完成进度。
+            所有数据来自后端接口或本地真实编排器产物，页面不会自行生成项目。
+          </p>
+        </div>
       </div>
 
       <div className={`source-note ${isReal ? 'real' : 'sim'}`}>

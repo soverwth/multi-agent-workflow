@@ -1,12 +1,17 @@
-# B05 交互展示 Agent · 开发任务 DAG 与八页面工作台
+# B05 交互展示 Agent · 分组侧栏十页面工作台
 
 第 10 组 B05（InterfaceAgent）实现。基于 React + TypeScript + Vite + React Flow + dagre，
-提供从用户想法到任务 DAG 的完整可视化：
+提供从用户想法到任务 DAG、再到观测回溯的完整可视化：
 
 ```text
-01 项目总览  02 项目主理人  03 需求与方案  04 规格与计划
-05 编排与执行（默认落地页）  06 Agent 执行  07 成果交付  08 历史项目
+项目        01 项目总览
+阶段一      02 项目主理人  03 需求讨论  04 需求与方案  05 规格与计划
+阶段二      06 编排与执行（默认落地页）  07 Agent 执行  08 成果交付
+阶段三      09 观测与回溯  10 历史项目
 ```
+
+布局为「顶栏品牌 / 项目切换 / 数据源」+ 左侧按阶段分组的侧栏 + 内容区。
+全程无人工审批门：需求确认由 agent 角色互相确认完成，用户只通过圆桌插话参与，流程不因等待而暂停。
 
 数据源严格区分「模拟推演」与「真实接口」，界面会明确标注当前来源，
 连接失败时不会把模拟数据当作真实数据展示。
@@ -47,21 +52,23 @@ npm run dev
 
 此模式默认打开 Vite 提示的地址（通常为 `http://localhost:5173`），仅用于开发热更新。
 
-## 八页面工作台
+## 十页面工作台
 
 | 页面 | 展示内容 | 数据来源 |
 | --- | --- | --- |
 | 01 项目总览 | 项目名称、目标、阶段、完成进度；提交想法创建项目 | `GET /api/runs`、`GET /api/task-runs`、`POST /api/runs` |
-| 02 项目主理人 | 统一 SE Workflow 工作台：想法 → 讨论 → 六人确认 R1 → 进入第二阶段 | `POST /api/runs`、`POST /api/runs/{id}/until-control-point`、`POST /api/runs/{id}/confirm`、`POST /api/task-runs/from-discussion` |
-| 03 需求与方案 | 需求分析、PRD（需求草案/R1）、候选方案、异议、六人确认与人工裁决 | `GET /api/runs/{id}`、`GET /api/runs/{id}/design-spec` |
-| 04 规格与计划 | 版本链、模型 API 配置、设计规格查看、从设计规格启动任务运行 | `GET/POST /api/llm/config`、`GET /api/runs/{id}/design-spec`、`POST /api/task-runs/from-spec` |
-| 05 编排与执行 | DAG / 甘特排期 / 时间线 / 事件流四种视图、运行控制、回放与断点恢复 | `GET /api/task-runs/{id}`、`/dag`、`/events?after=`、`POST .../step`、`/run`、`/replay`、`GET .../restore` |
-| 06 Agent 执行 | 按角色聚合当前任务、真实事件日志、测试证据与异常 | 由任务快照与事件流推导 |
-| 07 成果交付 | 生成文件、测试报告、运行导出、C1 契约案例 | 任务快照 `artifacts`/`evidence`/`logs` |
-| 08 历史项目 | 历史需求讨论与任务运行记录 | `GET /api/runs`、`GET /api/task-runs` |
+| 02 项目主理人 | 提交想法 → 推进讨论 → agent 共识确认 R1 → 进入第二阶段 | `POST /api/runs`、`POST /api/runs/{id}/until-control-point`、`POST /api/runs/{id}/confirm`、`POST /api/task-runs/from-discussion` |
+| 03 需求讨论 | A—H 八阶段进度看板；圆桌（四席位、发言记录、插话输入）。圆桌交互为阶段三占位，暂不发送请求 | 讨论运行黑板 |
+| 04 需求与方案 | 需求分析、PRD（需求草案/R1）、候选方案、异议、agent 角色表态 | `GET /api/runs/{id}`、`GET /api/runs/{id}/design-spec` |
+| 05 规格与计划 | 设计规格基线卡（baseline_id / sha256 / 父链占位）、版本链、模型 API 配置、设计规格查看、从设计规格启动 | `GET/POST /api/llm/config`、`GET /api/runs/{id}/design-spec`、`POST /api/task-runs/from-spec` |
+| 06 编排与执行 | DAG / 甘特排期 / 时间线 / 事件流四种视图、运行控制、回放与断点恢复 | `GET /api/task-runs/{id}`、`/dag`、`/events?after=`、`POST .../step`、`/run`、`/replay`、`GET .../restore` |
+| 07 Agent 执行 | 按角色聚合当前任务、真实事件日志、测试证据与异常 | 由任务快照与事件流推导 |
+| 08 成果交付 | 生成文件、测试报告、运行导出 | 任务快照 `artifacts`/`evidence`/`logs` |
+| 09 观测与回溯 | 跨阶段时间轴、模型调用工件表、三级回溯入口（均为阶段三占位） | 任务快照与事件流；模型调用记录待后端接入 |
+| 10 历史项目 | 历史需求讨论与任务运行记录 | `GET /api/runs`、`GET /api/task-runs` |
 
-> 尚未产生的内容（例如没有 R1 时的设计规格、没有运行时的交付物）会明确标注“未产生 / 暂无”，
-> 不会用模拟数据冒充真实执行结果。B02 的 7100 静态讨论页保持独立可访问。
+> 尚未产生的内容（例如没有 R1 时的设计规格、没有运行时的交付物）会明确标注"未产生 / 暂无"，
+> 不会用模拟数据冒充真实执行结果。占位功能均以「占位 / 待接入」徽标明示。
 
 ## 数据源
 
@@ -128,13 +135,14 @@ python -m backend.app --host 127.0.0.1 --port 7100
 
 # 另开终端
 cd ../frontend
-node tests/ui_smoke.mjs http://127.0.0.1:7100
+node tests/ui_smoke.mjs http://127.0.0.1:7100    # 功能冒烟（导航 / DAG / 视图 / 表单 / 错误隔离）
+node tests/ui_layout.mjs http://127.0.0.1:7100   # 布局断言（侧栏/顶栏/内容区、无横向溢出、窄屏断点）
 ```
 
-覆盖内容：八页面导航逐页渲染、DAG 节点与九态图例、四种任务视图切换、
-失败场景阻塞节点、任务详情面板十个区块（含人工介入）、统一工作台的
-想法输入与六人确认入口、模型 API 配置与设计规格入口、
-真实接口未连接时的错误提示且不渲染模拟节点。
+覆盖内容：十页面导航逐页渲染与四组分组、DAG 节点与九态图例、四种任务视图切换、
+失败场景阻塞节点、任务详情面板、项目主理人的想法输入与 agent 共识确认入口、
+圆桌 / 观测 / 基线占位页、模型 API 配置与设计规格入口、
+真实接口未连接时的错误提示且不渲染模拟节点；界面不再出现人工审批措辞。
 
 如只验证前端静态产物，也可以用 `vite preview` 临时占用 4321；这不属于正式集成运行。
 
@@ -142,7 +150,7 @@ node tests/ui_smoke.mjs http://127.0.0.1:7100
 
 ```bash
 node tests/screenshots.mjs http://127.0.0.1:7100 shots   # DAG / 失败 / 详情面板
-node tests/stage_shots.mjs http://127.0.0.1:7100 shots   # 八页面逐页
+node tests/ui_shots.mjs http://127.0.0.1:7100 shots       # 主要页面逐页
 ```
 
 ## 目录
@@ -150,15 +158,18 @@ node tests/stage_shots.mjs http://127.0.0.1:7100 shots   # 八页面逐页
 ```text
 frontend/
 ├── src/
-│   ├── App.tsx                     # 八页面工作台容器 / 双数据源
+│   ├── App.tsx                     # 工作台壳层 / 双数据源 / 页面装配
 │   ├── api/
 │   │   ├── controlApi.ts           # 讨论流程控制指令
 │   │   ├── taskRunApi.ts           # B02 任务运行 / DAG / 事件 / 回放 / 模型配置
 │   │   └── workbenchApi.ts         # 讨论运行 / 项目列表 / 设计规格适配
 │   ├── components/
-│   │   ├── StageNav.tsx            # 八页面工作台导航
+│   │   ├── StageNav.tsx            # 分组侧边栏导航（定义在 constants/stages.ts）
 │   │   ├── ProjectOverview.tsx     # 项目总览与创建
-│   │   ├── RequirementsView.tsx    # 需求分析与方案确认
+│   │   ├── RoundTableView.tsx      # 需求讨论：八阶段看板 + 圆桌（占位）
+│   │   ├── RequirementsView.tsx    # 需求分析与 agent 共识表态
+│   │   ├── BaselineCard.tsx        # 设计规格基线卡（hash / 父链占位）
+│   │   ├── ObservationView.tsx     # 观测与回溯（阶段三占位）
 │   │   ├── AgentExecutionView.tsx  # Agent 执行中心
 │   │   ├── HistoryView.tsx         # 历史项目
 │   │   ├── TaskGraph.tsx           # React Flow 画布
@@ -166,10 +177,11 @@ frontend/
 │   │   ├── TaskTimeline.tsx        # 甘特排期
 │   │   ├── TimelineView.tsx        # 时间线 / 关键路径视图
 │   │   ├── ActivityLog.tsx         # 事件流视图
-│   │   ├── TaskDetailPanel.tsx     # 任务详情 + 状态驱动人工介入
-│   │   ├── VersionChain.tsx        # 版本追溯面包屑
-│   │   └── CaseSamples.tsx         # T06—T08 案例字段样例
+│   │   ├── TaskDetailPanel.tsx     # 任务详情 + 运行控制
+│   │   └── VersionChain.tsx        # 版本追溯面包屑
 │   ├── constants/
+│   │   ├── stages.ts               # 页面定义与阶段分组
+│   │   ├── discussion.ts           # A—H 阶段与圆桌席位
 │   │   ├── status.ts               # 九态配色与文案
 │   │   └── naturalLanguage.ts      # 面向普通用户的状态/事件说明
 │   ├── data/
@@ -181,12 +193,14 @@ frontend/
 │   ├── layout/dagreLayout.ts       # DAG 布局
 │   ├── utils/
 │   │   ├── export.ts               # 成果导出（快照/工作流/task.md/追溯/缺陷/报告）
+│   │   ├── baseline.ts             # 从 design spec 推导基线事实
 │   │   └── timeline.ts             # 时间轴投影与关键路径估算
 │   └── types/task.ts               # 任务数据模型
 └── tests/
     ├── ui_smoke.mjs                # 无头浏览器冒烟
+    ├── ui_layout.mjs               # 结构化布局断言（宽屏 / 窄屏）
     ├── screenshots.mjs             # DAG / 失败 / 详情面板截图
-    └── stage_shots.mjs             # 八页面逐页截图
+    └── ui_shots.mjs                # 主要页面逐页截图
 ```
 
 ## 验收条件对照

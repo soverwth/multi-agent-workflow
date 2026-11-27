@@ -17,9 +17,10 @@ describe('面向普通用户的自然语言展示', () => {
   });
 
   it('把讨论阶段与状态翻译成人话', () => {
-    expect(narrativeForDiscussionStage('HUMAN_CONFIRMATION')).toContain('确认');
+    expect(narrativeForDiscussionStage('HUMAN_CONFIRMATION')).toContain('agent');
+    expect(narrativeForDiscussionStage('HUMAN_CONFIRMATION')).not.toContain('六');
     expect(narrativeForDiscussionStage('STOPPED')).toContain('不代表达成共识');
-    expect(narrativeForDiscussionStatus('WAITING_HUMAN')).toContain('等待你');
+    expect(narrativeForDiscussionStatus('WAITING_HUMAN')).toContain('无人工审批');
     expect(narrativeForDiscussionStatus('UNKNOWN')).toContain('UNKNOWN');
   });
 
