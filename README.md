@@ -233,6 +233,7 @@ python -m workflow_runtime pipeline --spec b01-spec-planner/docs/fixtures/lab-eq
 - [待澄清问题清单](docs/OPEN_QUESTIONS.md) — 需问老师的问题、需内部决定的事、技术遗留
 - [作业要求与现状对照](docs/HOMEWORK_SCOPE.md) — 原始作业要求与本仓库实现状态
 - [参考项目调研：SE-lib](docs/REFERENCE_PROJECTS.md) — 参照其工程规范的具体清单
+- [参考项目调研：其他三组实跑对比](docs/REFERENCE_PROJECTS_3WAY.md) — SE-DPA / SE-lib / SE-TeamPrjoect 的实跑记录、对比与吸收清单
 
 ### 工程文档
 
