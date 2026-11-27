@@ -89,7 +89,29 @@
 
 环境要求：Python 3.12+、Node.js 22+ 和 npm。
 
-各工作块可以独立验证：
+### 团队成员：先拉取，再开工
+
+仓库是 public，直接 clone：
+
+```powershell
+git clone https://github.com/soverwth/multi-agent-workflow.git
+cd multi-agent-workflow
+
+# 1) 确认基线是绿的
+python workflow_runtime/verify_contracts.py              # 契约一致性
+python -m workflow_runtime pipeline --scenario success   # 闭环冒烟，期望 24/24
+
+# 2) 读文档（顺序见 docs/TEAM_DIVISION.md 第〇节）
+#    README → PROJECT_GOALS_AND_PROCESS → TASK_ORCHESTRATION → STAGE2_STATUS → 自己那份 docs/team/<成员>.md
+
+# 3) 从自己的功能分支切任务分支（分支归属见 TEAM_DIVISION.md 3.2）
+git switch -c task/a-1-remove-gates feat/p1-agent-consensus
+```
+
+分工文档：[总纲](docs/TEAM_DIVISION.md) · 个人文档 [A](docs/team/A-讨论状态机与共识.md)、[B](docs/team/B-设计规格与基线.md)、[C](docs/team/C-计划编辑与契约.md)、[D](docs/team/D-真实执行与案例.md)、[E](docs/team/E-观测与验收.md)、[F](docs/team/F-圆桌与统一框架.md) —— **每人只读自己那份**。
+协作与分支流程见 [BRANCHING.md](docs/BRANCHING.md)。
+
+### 各工作块独立验证
 
 ```powershell
 # B01 规格规划（含通用规格输入与动态计划）

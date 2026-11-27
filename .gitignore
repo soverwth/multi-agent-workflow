@@ -19,3 +19,6 @@ _measure.py
 .pytest_cache/
 *.db
 *.sqlite3
+
+# 文档打包产物：成员直接读 docs/ 下的 Markdown，不入库二进制压缩包
+*.zip
